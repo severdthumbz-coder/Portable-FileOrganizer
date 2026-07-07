@@ -451,7 +451,7 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _progressValue, value);
         }
 
-        public string VersionInfo => "v5.0 build 1.2.11";
+        public string VersionInfo => "v5.0 build 1.2.12";
 
         private string _lastOperationDuration = "";
         public string LastOperationDuration
