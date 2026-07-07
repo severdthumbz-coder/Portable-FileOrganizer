@@ -1,0 +1,43 @@
+name: Build FileOrganizer
+
+# WPF only compiles on Windows, so we use a Windows runner.
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:   # allows manual runs from the Actions tab
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Print .NET version
+        run: dotnet --version
+
+      - name: Restore dependencies
+        run: dotnet restore FileOrganizer.csproj
+
+      - name: Build (Release)
+        run: dotnet build FileOrganizer.csproj -c Release --no-restore
+
+      # Publish the portable, self-contained single-file executable.
+      # Matches the local build-portable.bat output.
+      - name: Publish portable single-file exe
+        run: dotnet publish FileOrganizer.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+
+      - name: Upload portable build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortableFileOrganizer-win-x64
+          path: bin/Release/net9.0-windows*/win-x64/publish/PortableFileOrganizer.exe
+          if-no-files-found: warn

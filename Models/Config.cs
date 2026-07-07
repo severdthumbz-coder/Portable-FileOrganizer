@@ -1,0 +1,52 @@
+using System.Collections.Generic;
+
+namespace FileOrganizer.Models
+{
+    /// <summary>
+    /// Application configuration settings
+    /// </summary>
+    public class Config
+    {
+        public ScanMode ScanMode { get; set; } = ScanMode.Auto;
+        public CopyEngine CopyEngine { get; set; } = CopyEngine.CustomFast;
+        public FileOperationMode OperationMode { get; set; } = FileOperationMode.Move;
+        public DestinationStructureMode StructureMode { get; set; } = DestinationStructureMode.PreserveStructure;
+        public FileConflictResolution ConflictResolution { get; set; } = FileConflictResolution.Skip;
+        
+        public string SourceFolder { get; set; } = string.Empty;
+        public List<string> SourceFolders { get; set; } = new List<string>();
+        public bool UseMultipleSources { get; set; } = false;
+        
+        public string DestinationFolder { get; set; } = string.Empty;
+        
+        public bool EnableDateOrganization { get; set; } = false;
+        public string DateFormat { get; set; } = "Year\\Month (2024\\02)"; // Default format
+        
+        // File timestamp preservation
+        public bool PreserveTimestamps { get; set; } = true; // Default to TRUE
+        
+        // Data integrity verification
+        public VerificationMode VerificationMode { get; set; } = VerificationMode.Smart; // Default to Smart (recommended)
+        
+        // Error recovery settings
+        public bool ContinueOnErrors { get; set; } = true;
+        public int RetryAttempts { get; set; } = 3;
+        public int RetryDelaySeconds { get; set; } = 2;
+        
+        // Storage type override (manual selection)
+        public string StorageOverride { get; set; } = "Auto"; // "Auto", "NVMe", "SSD", "HDD"
+        
+        // Exception filters
+        public List<ExceptionFilter> Exceptions { get; set; } = new List<ExceptionFilter>();
+        
+        // External tool paths
+        public string TeraCopyPath { get; set; } = @"C:\Program Files\TeraCopy\TeraCopy.exe";
+        public string FastCopyPath { get; set; } = @"C:\Program Files\FastCopy\FastCopy.exe";
+        
+        public Config()
+        {
+            SourceFolders = new List<string>();
+            Exceptions = new List<ExceptionFilter>();
+        }
+    }
+}

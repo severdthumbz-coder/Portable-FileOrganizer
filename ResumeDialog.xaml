@@ -1,0 +1,232 @@
+<Window x:Class="FileOrganizer.ResumeDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Incomplete Operation Detected" 
+        Height="500" 
+        Width="650"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        ShowInTaskbar="False"
+        WindowStyle="SingleBorderWindow">
+
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Height" Value="45"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
+                <TextBlock Text="⚠" FontSize="48" Foreground="#FF9800" Margin="0,0,15,0"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Incomplete Operation Detected" 
+                              FontSize="22" 
+                              FontWeight="Bold" 
+                              Foreground="{DynamicResource PrimaryTextBrush}"/>
+                    <TextBlock x:Name="InterruptedTimeText"
+                              Text="Interrupted less than a minute ago" 
+                              FontSize="13" 
+                              Foreground="{DynamicResource SecondaryTextBrush}"
+                              Margin="0,4,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Operation Details -->
+        <Border Grid.Row="1" 
+                Background="{DynamicResource CardBackgroundBrush}" 
+                BorderBrush="{DynamicResource BorderBrush}" 
+                BorderThickness="1" 
+                CornerRadius="8"
+                Padding="20"
+                Margin="0,0,0,20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Operation Type -->
+                <TextBlock Grid.Row="0" Grid.Column="0" 
+                          Text="Operation:" 
+                          FontWeight="SemiBold" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"
+                          Margin="0,0,0,12"/>
+                <TextBlock x:Name="OperationModeText" 
+                          Grid.Row="0" Grid.Column="1" 
+                          Text="Move" 
+                          Foreground="{DynamicResource PrimaryTextBrush}"
+                          Margin="0,0,0,12"/>
+
+                <!-- Progress -->
+                <TextBlock Grid.Row="1" Grid.Column="0" 
+                          Text="Progress:" 
+                          FontWeight="SemiBold" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"
+                          Margin="0,0,0,12"/>
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,12">
+                    <TextBlock x:Name="ProgressText" 
+                              Text="45 of 100 files completed (45%)" 
+                              Foreground="{DynamicResource PrimaryTextBrush}"
+                              Margin="0,0,0,6"/>
+                    <ProgressBar x:Name="ProgressBar" 
+                                Height="8" 
+                                Value="45" 
+                                Maximum="100"
+                                Foreground="#4CAF50"/>
+                </StackPanel>
+
+                <!-- Source -->
+                <TextBlock Grid.Row="2" Grid.Column="0" 
+                          Text="Source:" 
+                          FontWeight="SemiBold" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"
+                          Margin="0,0,0,12"/>
+                <TextBlock x:Name="SourceFolderText" 
+                          Grid.Row="2" Grid.Column="1" 
+                          Text="C:\Users\..." 
+                          Foreground="{DynamicResource PrimaryTextBrush}"
+                          TextWrapping="Wrap"
+                          Margin="0,0,0,12"/>
+
+                <!-- Destination -->
+                <TextBlock Grid.Row="3" Grid.Column="0" 
+                          Text="Destination:" 
+                          FontWeight="SemiBold" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"
+                          Margin="0,0,0,12"/>
+                <TextBlock x:Name="DestinationFolderText" 
+                          Grid.Row="3" Grid.Column="1" 
+                          Text="D:\Organized\..." 
+                          Foreground="{DynamicResource PrimaryTextBrush}"
+                          TextWrapping="Wrap"
+                          Margin="0,0,0,12"/>
+
+                <!-- Files Remaining -->
+                <TextBlock Grid.Row="4" Grid.Column="0" 
+                          Text="Remaining:" 
+                          FontWeight="SemiBold" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"/>
+                <TextBlock x:Name="RemainingFilesText" 
+                          Grid.Row="4" Grid.Column="1" 
+                          Text="55 files" 
+                          Foreground="{DynamicResource PrimaryTextBrush}"/>
+            </Grid>
+        </Border>
+
+        <!-- Information Text -->
+        <Border Grid.Row="2" 
+                Background="{DynamicResource InfoBackgroundBrush}" 
+                BorderBrush="#2196F3" 
+                BorderThickness="1" 
+                CornerRadius="6"
+                Padding="15"
+                Margin="0,0,0,20">
+            <StackPanel>
+                <TextBlock Text="What would you like to do?" 
+                          FontWeight="SemiBold" 
+                          FontSize="14"
+                          Foreground="{DynamicResource PrimaryTextBrush}"
+                          Margin="0,0,0,10"/>
+                
+                <TextBlock TextWrapping="Wrap" 
+                          Foreground="{DynamicResource SecondaryTextBrush}"
+                          FontSize="12"
+                          LineHeight="18">
+                    <Run Text="• "/>
+                    <Run Text="Resume" FontWeight="SemiBold"/>
+                    <Run Text=" - Continue the operation from where it was interrupted"/>
+                    <LineBreak/>
+                    <Run Text="• "/>
+                    <Run Text="Undo" FontWeight="SemiBold"/>
+                    <Run Text=" - Reverse all files that were already moved/copied"/>
+                    <LineBreak/>
+                    <Run Text="• "/>
+                    <Run Text="Cancel" FontWeight="SemiBold"/>
+                    <Run Text=" - Ignore the incomplete operation and start fresh"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="ResumeButton" 
+                    Grid.Column="0" 
+                    Content="🔄 Resume" 
+                    Background="#4CAF50" 
+                    Foreground="White"
+                    Click="ResumeButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#45A049"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button x:Name="UndoButton" 
+                    Grid.Column="1" 
+                    Content="↩ Undo" 
+                    Background="#FF9800" 
+                    Foreground="White"
+                    Click="UndoButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#F57C00"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button x:Name="CancelButton" 
+                    Grid.Column="2" 
+                    Content="✖ Cancel" 
+                    Background="#757575" 
+                    Foreground="White"
+                    Click="CancelButton_Click">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#616161"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>
