@@ -83,6 +83,115 @@ namespace FileOrganizer.Services
         }
 
         /// <summary>
+        /// Organizes a single file to an explicit destination path, applying the given
+        /// operation (move/copy) and conflict resolution. Used by the automation triggers
+        /// (folder watcher, scheduler) after the RuleEngine has decided the destination.
+        /// Uses the safe CustomFast engine (copy-verify, and for a move only deletes the
+        /// source after a successful copy). Returns the CopyResult.
+        /// </summary>
+        public async Task<CopyResult> OrganizeFileAsync(
+            string sourcePath,
+            string destinationPath,
+            bool isMove,
+            FileConflictResolution conflict,
+            CancellationToken cancellationToken = default)
+        {
+            var result = new CopyResult
+            {
+                SourcePath = sourcePath,
+                DestinationPath = destinationPath
+            };
+
+            try
+            {
+                if (!File.Exists(sourcePath))
+                {
+                    result.Success = false;
+                    result.ErrorMessage = "Source file no longer exists.";
+                    return result;
+                }
+
+                var destDir = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                {
+                    Directory.CreateDirectory(destDir);
+                }
+
+                // Conflict handling for an existing destination.
+                if (File.Exists(destinationPath))
+                {
+                    switch (conflict)
+                    {
+                        case FileConflictResolution.Skip:
+                            result.Success = true; // treat as a no-op success
+                            result.ErrorMessage = "Skipped (destination already exists).";
+                            return result;
+
+                        case FileConflictResolution.OverwriteIfNewer:
+                            if (File.GetLastWriteTime(destinationPath) >= File.GetLastWriteTime(sourcePath))
+                            {
+                                result.Success = true;
+                                result.ErrorMessage = "Skipped (destination is newer or same).";
+                                return result;
+                            }
+                            break;
+
+                        case FileConflictResolution.RenameKeepBoth:
+                            destinationPath = GetUniqueDestination(destinationPath);
+                            result.DestinationPath = destinationPath;
+                            break;
+
+                        case FileConflictResolution.Overwrite:
+                        default:
+                            break; // engines overwrite
+                    }
+                }
+
+                if (isMove)
+                {
+                    result = await _customEngine.MoveFileAsync(
+                        sourcePath, destinationPath,
+                        _config.PreserveTimestamps, _config.VerificationMode,
+                        _config.RetryAttempts, _config.RetryDelaySeconds,
+                        null, null, cancellationToken);
+                }
+                else
+                {
+                    result = await _customEngine.CopyFileAsync(
+                        sourcePath, destinationPath,
+                        _config.PreserveTimestamps, _config.VerificationMode,
+                        _config.RetryAttempts, _config.RetryDelaySeconds,
+                        null, null, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = ex.Message;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Appends " (n)" before the extension until a non-existing path is found.
+        /// </summary>
+        private string GetUniqueDestination(string destinationPath)
+        {
+            var dir = Path.GetDirectoryName(destinationPath);
+            var name = Path.GetFileNameWithoutExtension(destinationPath);
+            var ext = Path.GetExtension(destinationPath);
+            int n = 1;
+            string candidate = destinationPath;
+            while (File.Exists(candidate))
+            {
+                candidate = Path.Combine(dir, $"{name} ({n}){ext}");
+                n++;
+            }
+            return candidate;
+        }
+
+        /// <summary>
         /// Processes a queue of files using the configured engine
         /// </summary>
         public async Task<OperationResult> ProcessQueueAsync(

@@ -44,6 +44,18 @@ namespace FileOrganizer.Models
         
         // Exception filters
         public List<ExceptionFilter> Exceptions { get; set; } = new List<ExceptionFilter>();
+
+        // ---- Automation (Tier 1): rule engine, folder watching, scheduling ----
+        public List<OrganizationRule> Rules { get; set; } = new List<OrganizationRule>();
+
+        // Folders the watcher/scheduler operate on. Falls back to SourceFolders if empty.
+        public List<string> WatchFolders { get; set; } = new List<string>();
+        public bool WatchIncludeSubfolders { get; set; } = false;
+
+        // Scheduler
+        public bool ScheduleEnabled { get; set; } = false;
+        public int ScheduleIntervalMinutes { get; set; } = 60;
+        public bool ScheduleRunOnStart { get; set; } = false;
         
         // External tool paths
         public string TeraCopyPath { get; set; } = @"C:\Program Files\TeraCopy\TeraCopy.exe";
