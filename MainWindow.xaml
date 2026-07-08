@@ -2011,13 +2011,219 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Changelog -->
+                        <!-- Quick Start Guide -->
                         <Border Background="{DynamicResource PanelBackgroundBrush}" 
                                BorderBrush="{DynamicResource BorderBrush}"
                                BorderThickness="1"
                                CornerRadius="5"
                                Padding="25"
                                Margin="0,0,0,20">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <TextBlock Text="🚀" FontSize="20" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Quick Start Guide" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="15,0,0,0">
+                                    <TextBlock Text="1. Configure Settings" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="14"
+                                              Margin="0,10,0,5"/>
+                                    <TextBlock Text="   Select your scan mode, copy engine, and operation preferences in the Configuration tab." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    
+                                    <TextBlock Text="2. Select Folders" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Choose your source folder to scan and destination folder for organized files." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    
+                                    <TextBlock Text="3. Run a Scan" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Click 'Initial Scan' in the Operations tab to analyze your files. Review the queue, then execute a Dry Run or Live Move." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Recommended Workflow -->
+                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
+                               BorderBrush="{DynamicResource BorderBrush}"
+                               BorderThickness="1"
+                               CornerRadius="5"
+                               Padding="25"
+                               Margin="0,0,0,20">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <TextBlock Text="🧭" FontSize="20" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Recommended Workflow" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <TextBlock Text="A safe, repeatable process for organizing a new set of files with no surprises:" 
+                                          Foreground="{DynamicResource TextSecondaryBrush}"
+                                          FontSize="13"
+                                          Margin="0,0,0,10"
+                                          TextWrapping="Wrap"/>
+
+                                <StackPanel Margin="15,0,0,0">
+                                    <TextBlock Text="1. Set up exceptions first" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,10,0,5"/>
+                                    <TextBlock Text="   In the Exceptions tab, add any files, folders, or patterns you never want touched (e.g. system folders, active projects). Exceptions are applied on every scan, so setting them once protects every future run." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="2. Confirm your configuration" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Choose your copy engine and structure mode, then check the disk-space panel. If auto-detection picks the wrong drive type, set a manual override so the adaptive engine tunes its thread count correctly for your storage (NVMe / SSD / HDD)." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="3. Scan, then review the queue" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Run Initial Scan (or Quick Scan for a faster pass), then read the File Queue: check categories, sizes, and destination paths before doing anything irreversible." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="4. Always Dry Run before a Live Move" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Use Dry Run (Preview) to see exactly what would move, how much data, and how conflicts would be handled — with no files touched. When the preview matches your intent, run Live Copy or Live Move." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="5. Check for duplicates" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   In the Duplicates tab, run a Full (SHA-256) scan for accuracy or a Quick (size-only) scan for speed. Use a smart-selection strategy to auto-select which copies to remove, review the selection, then delete or move them." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="6. Verify, and undo if needed" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Check the History and Statistics tabs to confirm results. If a Move didn't go as planned, use Undo Last Move to return files to their original locations. If an operation was interrupted, relaunch and use the resume/undo prompt to recover cleanly." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Tip: Save your configuration once it's dialed in — it's reused on every launch, so you only build this setup once." 
+                                              FontStyle="Italic"
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="12"
+                                              Margin="0,15,0,0"
+                                              TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Features Overview -->
+                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
+                               BorderBrush="{DynamicResource BorderBrush}"
+                               BorderThickness="1"
+                               CornerRadius="5"
+                               Padding="25"
+                               Margin="0,0,0,20">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <TextBlock Text="⭐" FontSize="20" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Features Overview" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="15,0,0,0">
+                                    <TextBlock Text="Smart Categorization" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,10,0,5"/>
+                                    <TextBlock Text="Automatically categorizes files by type (Documents, Images, Videos, Audio, Archives, etc.) based on comprehensive extension mapping." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    
+                                    <TextBlock Text="Multiple Copy Engines" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Choose between Windows Standard, Custom Fast, TeraCopy, or FastCopy for optimized file transfer performance." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    
+                                    <TextBlock Text="Flexible Structure Modes" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Organize by category, preserve original structure, or use hybrid mode to maintain folder hierarchies while categorizing." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    
+                                    <TextBlock Text="Safe Operation Modes" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Test changes with Dry Run before executing. Support for both Move and Copy operations with intelligent conflict resolution." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Changelog -->
+                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
+                               BorderBrush="{DynamicResource BorderBrush}"
+                               BorderThickness="1"
+                               CornerRadius="5"
+                               Padding="25">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                     <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
@@ -3104,212 +3310,6 @@
                                               Margin="0,3"
                                               TextWrapping="Wrap"/>
                                     <TextBlock Text="• Complete operation history tracking with detailed logs" 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Quick Start Guide -->
-                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
-                               BorderBrush="{DynamicResource BorderBrush}"
-                               BorderThickness="1"
-                               CornerRadius="5"
-                               Padding="25"
-                               Margin="0,0,0,20">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock Text="🚀" FontSize="20" Margin="0,0,10,0"/>
-                                    <TextBlock Text="Quick Start Guide" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                                </StackPanel>
-
-                                <StackPanel Margin="15,0,0,0">
-                                    <TextBlock Text="1. Configure Settings" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource TextBrush}"
-                                              FontSize="14"
-                                              Margin="0,10,0,5"/>
-                                    <TextBlock Text="   Select your scan mode, copy engine, and operation preferences in the Configuration tab." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                    
-                                    <TextBlock Text="2. Select Folders" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource TextBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Choose your source folder to scan and destination folder for organized files." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                    
-                                    <TextBlock Text="3. Run a Scan" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource TextBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Click 'Initial Scan' in the Operations tab to analyze your files. Review the queue, then execute a Dry Run or Live Move." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Recommended Workflow -->
-                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
-                               BorderBrush="{DynamicResource BorderBrush}"
-                               BorderThickness="1"
-                               CornerRadius="5"
-                               Padding="25"
-                               Margin="0,0,0,20">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock Text="🧭" FontSize="20" Margin="0,0,10,0"/>
-                                    <TextBlock Text="Recommended Workflow" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                                </StackPanel>
-
-                                <TextBlock Text="A safe, repeatable process for organizing a new set of files with no surprises:" 
-                                          Foreground="{DynamicResource TextSecondaryBrush}"
-                                          FontSize="13"
-                                          Margin="0,0,0,10"
-                                          TextWrapping="Wrap"/>
-
-                                <StackPanel Margin="15,0,0,0">
-                                    <TextBlock Text="1. Set up exceptions first" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,10,0,5"/>
-                                    <TextBlock Text="   In the Exceptions tab, add any files, folders, or patterns you never want touched (e.g. system folders, active projects). Exceptions are applied on every scan, so setting them once protects every future run." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="2. Confirm your configuration" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Choose your copy engine and structure mode, then check the disk-space panel. If auto-detection picks the wrong drive type, set a manual override so the adaptive engine tunes its thread count correctly for your storage (NVMe / SSD / HDD)." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="3. Scan, then review the queue" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Run Initial Scan (or Quick Scan for a faster pass), then read the File Queue: check categories, sizes, and destination paths before doing anything irreversible." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="4. Always Dry Run before a Live Move" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Use Dry Run (Preview) to see exactly what would move, how much data, and how conflicts would be handled — with no files touched. When the preview matches your intent, run Live Copy or Live Move." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="5. Check for duplicates" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   In the Duplicates tab, run a Full (SHA-256) scan for accuracy or a Quick (size-only) scan for speed. Use a smart-selection strategy to auto-select which copies to remove, review the selection, then delete or move them." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="6. Verify, and undo if needed" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="   Check the History and Statistics tabs to confirm results. If a Move didn't go as planned, use Undo Last Move to return files to their original locations. If an operation was interrupted, relaunch and use the resume/undo prompt to recover cleanly." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-
-                                    <TextBlock Text="Tip: Save your configuration once it's dialed in — it's reused on every launch, so you only build this setup once." 
-                                              FontStyle="Italic"
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="12"
-                                              Margin="0,15,0,0"
-                                              TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Features Overview -->
-                        <Border Background="{DynamicResource PanelBackgroundBrush}" 
-                               BorderBrush="{DynamicResource BorderBrush}"
-                               BorderThickness="1"
-                               CornerRadius="5"
-                               Padding="25">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                                    <TextBlock Text="⭐" FontSize="20" Margin="0,0,10,0"/>
-                                    <TextBlock Text="Features Overview" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
-                                </StackPanel>
-
-                                <StackPanel Margin="15,0,0,0">
-                                    <TextBlock Text="Smart Categorization" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,10,0,5"/>
-                                    <TextBlock Text="Automatically categorizes files by type (Documents, Images, Videos, Audio, Archives, etc.) based on comprehensive extension mapping." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                    
-                                    <TextBlock Text="Multiple Copy Engines" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="Choose between Windows Standard, Custom Fast, TeraCopy, or FastCopy for optimized file transfer performance." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                    
-                                    <TextBlock Text="Flexible Structure Modes" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="Organize by category, preserve original structure, or use hybrid mode to maintain folder hierarchies while categorizing." 
-                                              Foreground="{DynamicResource TextSecondaryBrush}"
-                                              FontSize="13"
-                                              Margin="0,3"
-                                              TextWrapping="Wrap"/>
-                                    
-                                    <TextBlock Text="Safe Operation Modes" 
-                                              FontWeight="SemiBold"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              FontSize="14"
-                                              Margin="0,15,0,5"/>
-                                    <TextBlock Text="Test changes with Dry Run before executing. Support for both Move and Copy operations with intelligent conflict resolution." 
                                               Foreground="{DynamicResource TextSecondaryBrush}"
                                               FontSize="13"
                                               Margin="0,3"
