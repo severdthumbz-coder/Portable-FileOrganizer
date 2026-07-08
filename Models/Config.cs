@@ -27,6 +27,12 @@ namespace FileOrganizer.Models
         
         // Data integrity verification
         public VerificationMode VerificationMode { get; set; } = VerificationMode.Smart; // Default to Smart (recommended)
+
+        // When using external engines (TeraCopy / FastCopy), verify each copied file.
+        // Enables the tool's own verification (FastCopy /verify, TeraCopy CRC) plus an
+        // app-side destination existence + size check. If VerificationMode is FullHash,
+        // an independent SHA-256 comparison is also performed. Default ON for safety.
+        public bool VerifyExternalCopies { get; set; } = true;
         
         // Error recovery settings
         public bool ContinueOnErrors { get; set; } = true;

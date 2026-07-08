@@ -41,7 +41,7 @@ namespace FileOrganizer.Services
                             teraCopyPath.InstallPath, 
                             _config.ConflictResolution, 
                             _config.PreserveTimestamps,
-                            _config.VerificationMode);
+                            _config.VerifyExternalCopies ? _config.VerificationMode : VerificationMode.None);
                     }
                     catch
                     {
@@ -66,7 +66,7 @@ namespace FileOrganizer.Services
                             fastCopyPath.InstallPath, 
                             _config.ConflictResolution, 
                             _config.PreserveTimestamps,
-                            _config.VerificationMode);
+                            _config.VerifyExternalCopies ? _config.VerificationMode : VerificationMode.None);
                     }
                     catch
                     {
@@ -255,16 +255,11 @@ namespace FileOrganizer.Services
                     case CopyEngine.TeraCopy:
                         if (_teraCopyEngine != null)
                         {
-                            var tcSuccess = await ExecuteTeraCopyAsync(entry.SourcePath, destinationPath, isMove, cancellationToken);
-                            return new CopyResult 
-                            { 
-                                Success = tcSuccess,
-                                SourcePath = entry.SourcePath,
-                                DestinationPath = destinationPath,
-                                TotalBytes = entry.SizeBytes,
-                                Verified = _config.VerificationMode != VerificationMode.None,
-                                VerificationMode = _config.VerificationMode
-                            };
+                            // Always run the external tool in COPY mode (isMove: false) so a failed
+                            // verification never leaves us with a deleted source. The finalizer
+                            // handles rename, verification, and (for a move) source deletion.
+                            var tcSuccess = await ExecuteTeraCopyAsync(entry.SourcePath, destinationPath, false, cancellationToken);
+                            return await FinalizeExternalCopyAsync(entry.SourcePath, destinationPath, isMove, tcSuccess, entry.SizeBytes);
                         }
                         else
                             return await ExecuteCustomFastAsync(entry.SourcePath, destinationPath, isMove, statusCallback, cancellationToken);
@@ -272,16 +267,8 @@ namespace FileOrganizer.Services
                     case CopyEngine.FastCopy:
                         if (_fastCopyEngine != null)
                         {
-                            var fcSuccess = await ExecuteFastCopyAsync(entry.SourcePath, destinationPath, isMove, cancellationToken);
-                            return new CopyResult 
-                            { 
-                                Success = fcSuccess,
-                                SourcePath = entry.SourcePath,
-                                DestinationPath = destinationPath,
-                                TotalBytes = entry.SizeBytes,
-                                Verified = _config.VerificationMode != VerificationMode.None,
-                                VerificationMode = _config.VerificationMode
-                            };
+                            var fcSuccess = await ExecuteFastCopyAsync(entry.SourcePath, destinationPath, false, cancellationToken);
+                            return await FinalizeExternalCopyAsync(entry.SourcePath, destinationPath, isMove, fcSuccess, entry.SizeBytes);
                         }
                         else
                             return await ExecuteCustomFastAsync(entry.SourcePath, destinationPath, isMove, statusCallback, cancellationToken);
@@ -352,6 +339,150 @@ namespace FileOrganizer.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Finalizes an external-engine (TeraCopy/FastCopy) copy: applies any required
+        /// rename, verifies the result when enabled, and — for a move — deletes the
+        /// source ONLY after verification passes. The external tool is always run in
+        /// copy mode (never move) so a failed verification never destroys the source.
+        /// </summary>
+        private async Task<CopyResult> FinalizeExternalCopyAsync(
+            string sourcePath,
+            string destinationPath,
+            bool isMove,
+            bool toolReportedSuccess,
+            long totalBytes)
+        {
+            var result = new CopyResult
+            {
+                SourcePath = sourcePath,
+                DestinationPath = destinationPath,
+                TotalBytes = totalBytes,
+                VerificationMode = _config.VerificationMode
+            };
+
+            if (!toolReportedSuccess)
+            {
+                result.Success = false;
+                result.ErrorMessage = "External copy tool reported failure.";
+                return result;
+            }
+
+            // External tools copy into the destination FOLDER using the ORIGINAL filename.
+            // If the intended destination filename differs (a rename), move it into place.
+            var destFolder = Path.GetDirectoryName(destinationPath);
+            var landedPath = Path.Combine(destFolder, Path.GetFileName(sourcePath));
+
+            try
+            {
+                if (!string.Equals(landedPath, destinationPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (File.Exists(landedPath))
+                    {
+                        File.Move(landedPath, destinationPath, true); // rename into final name
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Copy succeeded but rename to final name failed: {ex.Message}";
+                return result;
+            }
+
+            // Verification (only when enabled)
+            if (_config.VerifyExternalCopies)
+            {
+                // 1) Cheap sanity check: destination exists and size matches source.
+                try
+                {
+                    if (!File.Exists(destinationPath))
+                    {
+                        result.Success = false;
+                        result.ErrorMessage = "Verification failed: destination file not found after copy.";
+                        return result;
+                    }
+
+                    var srcInfo = new FileInfo(sourcePath);
+                    var dstInfo = new FileInfo(destinationPath);
+                    if (srcInfo.Exists && srcInfo.Length != dstInfo.Length)
+                    {
+                        result.Success = false;
+                        result.ErrorMessage = $"Verification failed: size mismatch (source {srcInfo.Length}, destination {dstInfo.Length}).";
+                        return result;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"Verification error: {ex.Message}";
+                    return result;
+                }
+
+                // 2) Independent SHA-256 comparison when the user asked for FullHash.
+                //    (Smart/SizeOnly rely on the size check above plus the tool's own verify.)
+                if (_config.VerificationMode == VerificationMode.FullHash)
+                {
+                    try
+                    {
+                        var srcHash = await ComputeFileHashAsync(sourcePath);
+                        var dstHash = await ComputeFileHashAsync(destinationPath);
+                        if (!string.Equals(srcHash, dstHash, StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Success = false;
+                            result.ErrorMessage = "Verification failed: SHA-256 hash mismatch.";
+                            return result;
+                        }
+                        result.SourceHash = srcHash;
+                        result.DestHash = dstHash;
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Success = false;
+                        result.ErrorMessage = $"Hash verification error: {ex.Message}";
+                        return result;
+                    }
+                }
+
+                result.Verified = true;
+            }
+            else
+            {
+                result.Verified = false;
+            }
+
+            // For a move: delete the source ONLY now that copy (and any verification) succeeded.
+            if (isMove)
+            {
+                try
+                {
+                    File.Delete(sourcePath);
+                }
+                catch (Exception ex)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = $"File copied/verified but failed to delete source: {ex.Message}";
+                    return result;
+                }
+            }
+
+            result.Success = true;
+            result.BytesCopied = totalBytes;
+            return result;
+        }
+
+        /// <summary>
+        /// Computes the SHA-256 hash of a file (used for independent external-copy verification).
+        /// </summary>
+        private async Task<string> ComputeFileHashAsync(string path)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 8 * 1024 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                var hashBytes = await sha256.ComputeHashAsync(stream);
+                return BitConverter.ToString(hashBytes).Replace("-", "");
+            }
         }
 
         /// <summary>

@@ -191,11 +191,13 @@ namespace FileOrganizer.Services
             var destFolder = Path.GetDirectoryName(destinationPath);
             
             // FastCopy command format:
-            // FastCopy.exe /cmd=mode /srcfile="source" /to="destination" [options]
+            // FastCopy.exe /cmd=mode "source" /to="destination_folder\" [options]
             
             var args = new StringBuilder();
             args.Append($"/cmd={mode} ");
-            args.Append($"/srcfile=\"{sourcePath}\" ");
+            // Source is a POSITIONAL argument. (/srcfile is for a text file listing sources,
+            // not the file being copied — using it for the source path was a bug.)
+            args.Append($"\"{sourcePath}\" ");
             args.Append($"/to=\"{destFolder}\\\" ");
 
             // Conflict resolution options

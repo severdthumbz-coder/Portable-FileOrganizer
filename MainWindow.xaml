@@ -6,7 +6,7 @@
         xmlns:models="clr-namespace:FileOrganizer.Models"
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
-        Title="Portable File Organizer v5.0 build 1.2.12" 
+        Title="Portable File Organizer v5.0 build 1.2.13" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -46,7 +46,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.2.12" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.2.13" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -616,6 +616,33 @@
                                                   FontSize="11"
                                                   Margin="0,10,0,0"
                                                   FontStyle="Italic"
+                                                  TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Verify External Copies (TeraCopy / FastCopy) -->
+                                <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                       BorderBrush="{DynamicResource AccentBrush}"
+                                       BorderThickness="1"
+                                       CornerRadius="3"
+                                       Padding="15,10"
+                                       Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <CheckBox IsChecked="{Binding VerifyExternalCopies}"
+                                                 FontSize="14"
+                                                 FontWeight="SemiBold"
+                                                 Foreground="{DynamicResource TextBrush}"
+                                                 Content="🔎 Verify external copies (TeraCopy / FastCopy)"/>
+                                        <TextBlock Text="When enabled, external copy tools run in copy mode and each file is verified before the source is removed (for moves). Uses the tool's own verification (FastCopy /verify, TeraCopy CRC) plus a destination existence and size check. With Verification Mode set to Full Hash, an independent SHA-256 comparison is also performed." 
+                                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                                  FontSize="12"
+                                                  Margin="0,8,0,0"
+                                                  TextWrapping="Wrap"/>
+                                        <TextBlock Text="Recommended ON. Turning this off is faster but trusts the external tool's exit code without independent checks." 
+                                                  Foreground="{DynamicResource AccentBrush}"
+                                                  FontSize="12"
+                                                  Margin="0,6,0,0"
+                                                  FontWeight="SemiBold"
                                                   TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </Border>
@@ -1961,7 +1988,7 @@
                                           FontWeight="SemiBold"
                                           Foreground="{DynamicResource TextBrush}"
                                           Margin="0,10,0,5"/>
-                                <TextBlock Text="v5.0 build 1.2.12" 
+                                <TextBlock Text="v5.0 build 1.2.13" 
                                           FontSize="14" 
                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                           Margin="0,0,0,5"/>
@@ -1995,6 +2022,46 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                     <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                                     <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <!-- Build 1.2.13 -->
+                                <TextBlock Text="Build 1.2.13 - External Copy Verification &amp; Engine Fixes" 
+                                          FontWeight="SemiBold"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          FontSize="16"
+                                          Margin="0,10,0,10"/>
+
+                                <StackPanel Margin="15,0,0,20">
+                                    <TextBlock Text="• Verify External Copies (new setting, default ON) - When using TeraCopy or FastCopy, each file is now verified before the source is removed on a move" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Safe moves with external engines - External tools now always run in copy mode; the source is deleted only after verification passes, so a failed copy can never destroy the original" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Uses the tool's own verification - FastCopy /verify and TeraCopy CRC are used where available, plus a destination existence and size check; Full Hash mode adds an independent SHA-256 comparison" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Fixed FastCopy source argument - The source file is now passed as a positional argument instead of /srcfile (which is for a text list of sources); FastCopy copies now target the correct file" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Fixed renames with external engines - Files that need a new name are now renamed into place after the tool copies them to the destination folder" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Fixed TeraCopy flag conflict - Removed the contradictory /Close and /NoClose pair that produced undefined close behavior" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <!-- Build 1.2.12 -->

@@ -211,10 +211,12 @@ namespace FileOrganizer.Services
                     break;
             }
 
-            // Additional options
-            args.Append("/Close ");          // Close TeraCopy when done
-            args.Append("/NoClose ");        // Actually, don't close - we need to read output
-            args.Append("/Silent ");         // No GUI
+            // Additional options.
+            // NOTE: /Close and /NoClose are mutually exclusive; emitting both is undefined.
+            // We run headless and read the process result, so keep the window from lingering
+            // with /Close and suppress the GUI with /Silent.
+            args.Append("/Close ");          // Close TeraCopy automatically when done
+            args.Append("/Silent ");         // No GUI prompts
             
             // Preserve timestamps if enabled
             if (_preserveTimestamps)

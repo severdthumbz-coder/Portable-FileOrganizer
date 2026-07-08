@@ -37,6 +37,7 @@ namespace FileOrganizer.ViewModels
         private string _dateFormat = "Year\\Month (2024\\02)";
         private bool _preserveTimestamps = true; // Default to preserving timestamps
         private VerificationMode _verificationMode = VerificationMode.Smart; // Default to Smart mode
+        private bool _verifyExternalCopies = true; // Default ON: verify TeraCopy/FastCopy results
         
         private bool _continueOnErrors = true;
         private int _retryAttempts = 3;
@@ -392,6 +393,12 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _preserveTimestamps, value);
         }
 
+        public bool VerifyExternalCopies
+        {
+            get => _verifyExternalCopies;
+            set => SetProperty(ref _verifyExternalCopies, value);
+        }
+
         public VerificationMode VerificationMode
         {
             get => _verificationMode;
@@ -451,7 +458,7 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _progressValue, value);
         }
 
-        public string VersionInfo => "v5.0 build 1.2.12";
+        public string VersionInfo => "v5.0 build 1.2.13";
 
         private string _lastOperationDuration = "";
         public string LastOperationDuration
@@ -905,6 +912,7 @@ namespace FileOrganizer.ViewModels
                     EnableDateOrganization = EnableDateOrganization,
                     PreserveTimestamps = PreserveTimestamps,
                     VerificationMode = VerificationMode,
+                    VerifyExternalCopies = VerifyExternalCopies,
                     ContinueOnErrors = ContinueOnErrors,
                     RetryAttempts = RetryAttempts,
                     RetryDelaySeconds = RetryDelaySeconds,
@@ -2677,6 +2685,7 @@ namespace FileOrganizer.ViewModels
                     EnableDateOrganization = config.EnableDateOrganization;
                     PreserveTimestamps = config.PreserveTimestamps;
                     VerificationMode = config.VerificationMode;
+                    VerifyExternalCopies = config.VerifyExternalCopies;
                     ContinueOnErrors = config.ContinueOnErrors;
                     RetryAttempts = config.RetryAttempts;
                     RetryDelaySeconds = config.RetryDelaySeconds;
