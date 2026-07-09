@@ -104,9 +104,12 @@ namespace FileOrganizer.Services
                             
                             // Notify retry
                             statusCallback?.Invoke($"Retrying verification: {Path.GetFileName(sourcePath)} (Attempt {currentRetry + 2}/{retryAttempts})");
-                            
-                            // Wait before retry
-                            await Task.Delay(retryDelaySeconds * 1000, cancellationToken);
+
+                            // Exponential backoff (capped at 30s): baseDelay * 2^attempt.
+                            // Smooths over transient failures common on network/flaky drives
+                            // rather than hammering with a fixed short delay.
+                            int backoffSeconds = (int)Math.Min(30, retryDelaySeconds * Math.Pow(2, currentRetry));
+                            await Task.Delay(backoffSeconds * 1000, cancellationToken);
                             
                             // Retry
                             return await CopyFileAsync(

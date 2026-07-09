@@ -46,6 +46,11 @@ namespace FileOrganizer.Models
         public int FilesScanned { get; set; }
         public int SuccessCount { get; set; }
         public string Status { get; set; }
+
+        // Re-run support (Tier 2): remember what the operation acted on.
+        public string SourceFolder { get; set; } = "";
+        public string DestinationFolder { get; set; } = "";
+        public bool CanReRun => !string.IsNullOrWhiteSpace(SourceFolder) && !string.IsNullOrWhiteSpace(DestinationFolder);
         
         // Verification tracking
         public int FilesVerified { get; set; } = 0;

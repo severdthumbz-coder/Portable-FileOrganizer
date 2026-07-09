@@ -6,7 +6,7 @@
         xmlns:models="clr-namespace:FileOrganizer.Models"
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
-        Title="Portable File Organizer v5.0 build 1.3.0" 
+        Title="Portable File Organizer v5.0 build 1.3.1" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -47,7 +47,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.3.0" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.3.1" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -1231,6 +1231,41 @@
                                 <TextBlock Text="Move Operations" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                             </StackPanel>
 
+                            <!-- Live Performance Monitor (Tier 2) -->
+                            <Border Background="{DynamicResource WindowBackgroundBrush}"
+                                   BorderBrush="{DynamicResource AccentBrush}"
+                                   BorderThickness="1"
+                                   CornerRadius="5"
+                                   Padding="15,12"
+                                   Margin="0,0,0,15"
+                                   Visibility="{Binding ShowPerformanceMonitor, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <TextBlock Text="⚡" FontSize="16" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Live Performance" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                    </StackPanel>
+                                    <UniformGrid Columns="4">
+                                        <StackPanel Margin="0,0,10,0">
+                                            <TextBlock Text="SPEED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding TransferSpeedDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,10,0">
+                                            <TextBlock Text="TIME REMAINING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding EtaDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,10,0">
+                                            <TextBlock Text="THROUGHPUT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding FilesPerSecondDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="DATA" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding DataProgressDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="{Binding CurrentFileDisplay}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+
                             <WrapPanel Margin="0,10" HorizontalAlignment="Center">
                                 <Button Content="👁 Dry Run (Preview)" 
                                        Command="{Binding DryRunCommand}"
@@ -1894,6 +1929,20 @@
                             <DataGridTextColumn Header="Success Count" Binding="{Binding SuccessCount}" Width="130"/>
                             <DataGridTextColumn Header="Verification" Binding="{Binding VerificationStatusDisplay}" Width="180"/>
                             <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                            <DataGridTemplateColumn Header="Re-run" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="⟳ Re-run"
+                                               FontSize="11"
+                                               Padding="6,3"
+                                               Margin="2"
+                                               Cursor="Hand"
+                                               IsEnabled="{Binding CanReRun}"
+                                               Command="{Binding DataContext.ReRunOperationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                               CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -2215,7 +2264,7 @@
                                           FontWeight="SemiBold"
                                           Foreground="{DynamicResource TextBrush}"
                                           Margin="0,10,0,5"/>
-                                <TextBlock Text="v5.0 build 1.3.0" 
+                                <TextBlock Text="v5.0 build 1.3.1" 
                                           FontSize="14" 
                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                           Margin="0,0,0,5"/>
@@ -2374,6 +2423,28 @@
                                               Margin="0,3"
                                               TextWrapping="Wrap"/>
 
+                                    <TextBlock Text="7. Watch the live performance monitor" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   During a Live Move or Copy, the Operations tab shows real-time speed, time remaining, throughput, and data transferred. Use it to confirm large transfers are running at full speed and to gauge how long a big job will take." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="8. Automate once you trust your rules" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Once a workflow is proven, recreate it as rules in the Automation tab. Test with Run Sweep Now, then enable Real-Time Watching to sort files as they arrive, or a Scheduled Sweep to tidy folders on a timer. To repeat a past job, use the Re-run button in History to reload its settings for review." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
                                     <TextBlock Text="Tip: Save your configuration once it's dialed in — it's reused on every launch, so you only build this setup once." 
                                               FontStyle="Italic"
                                               Foreground="{DynamicResource TextSecondaryBrush}"
@@ -2404,6 +2475,50 @@
                                               FontSize="14"
                                               Margin="0,10,0,5"/>
                                     <TextBlock Text="Automatically categorizes files by type (Documents, Images, Videos, Audio, Archives, etc.) based on comprehensive extension mapping." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Automation: Rules, Watching &amp; Scheduling" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Define rules (by extension, name, regex, size, or date) that route files to destinations. Let FileOrganizer sort files automatically the moment they arrive (Real-Time Watching) or on a recurring timer (Scheduled Sweeps), with a live activity log." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Live Performance Monitor" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="During Live Move/Copy, watch real-time transfer speed, estimated time remaining, throughput (files/sec), and data transferred — so you can see large jobs running at full speed and know how long they'll take." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Resilient Transfers" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Retries use exponential backoff (capped) to smooth over transient failures common on network and flaky drives, complementing resume-after-interruption and copy-verify safety." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Re-run from History" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Reload a past operation's source, destination, and mode with one click from the History tab, then review and run again." 
                                               Foreground="{DynamicResource TextSecondaryBrush}"
                                               FontSize="13"
                                               Margin="0,3"
@@ -2455,6 +2570,36 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                     <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                                     <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <!-- Build 1.3.1 -->
+                                <TextBlock Text="Build 1.3.1 - Performance Monitor &amp; Resilience (Tier 2)" 
+                                          FontWeight="SemiBold"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          FontSize="16"
+                                          Margin="0,10,0,10"/>
+
+                                <StackPanel Margin="15,0,0,20">
+                                    <TextBlock Text="• Live Performance Monitor - During Live Move/Copy, the Operations tab shows real-time transfer speed, time remaining, throughput (files/sec), and data transferred, plus the current file" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Resilient Transfers - Retries now use exponential backoff (capped at 30s) to smooth over transient failures common on network and flaky drives" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Re-run from History - Each Move/Copy history entry now remembers its source and destination; a Re-run button reloads those settings for review (you still scan and run, keeping it safe)" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Recommended Workflow and Features updated to cover the performance monitor and automation" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <!-- Build 1.3.0 -->

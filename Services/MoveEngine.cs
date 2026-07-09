@@ -217,6 +217,11 @@ namespace FileOrganizer.Services
 
             var processedFiles = 0;
 
+            // ---- Performance tracking (Tier 2) ----
+            long totalBytesAll = queue.Sum(e => e.SizeBytes);
+            long bytesDone = 0;
+            var opStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
             foreach (var entry in queue)
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -328,12 +333,29 @@ namespace FileOrganizer.Services
                 }
 
                 processedFiles++;
+                bytesDone += entry.SizeBytes;
+
+                double elapsedSec = opStopwatch.Elapsed.TotalSeconds;
+                double bps = elapsedSec > 0 ? bytesDone / elapsedSec : 0;
+                double fps = elapsedSec > 0 ? processedFiles / elapsedSec : 0;
+                TimeSpan? eta = null;
+                if (bps > 0 && totalBytesAll > bytesDone)
+                    eta = TimeSpan.FromSeconds((totalBytesAll - bytesDone) / bps);
+                else if (fps > 0 && queue.Count > processedFiles)
+                    eta = TimeSpan.FromSeconds((queue.Count - processedFiles) / fps);
+
                 progress?.Report(new OperationProgress
                 {
                     ProcessedFiles = processedFiles,
                     TotalFiles = queue.Count,
                     CurrentFile = entry.FileName,
-                    PercentComplete = (double)processedFiles / queue.Count * 100
+                    PercentComplete = (double)processedFiles / queue.Count * 100,
+                    BytesProcessed = bytesDone,
+                    TotalBytes = totalBytesAll,
+                    BytesPerSecond = bps,
+                    FilesPerSecond = fps,
+                    Elapsed = opStopwatch.Elapsed,
+                    EstimatedRemaining = eta
                 });
             }
 
@@ -875,6 +897,14 @@ namespace FileOrganizer.Services
         public int TotalFiles { get; set; }
         public string CurrentFile { get; set; }
         public double PercentComplete { get; set; }
+
+        // ---- Performance metrics (Tier 2) ----
+        public long BytesProcessed { get; set; }      // cumulative bytes done
+        public long TotalBytes { get; set; }          // total bytes in the operation
+        public double BytesPerSecond { get; set; }    // instantaneous/rolling transfer rate
+        public double FilesPerSecond { get; set; }    // rolling file rate
+        public TimeSpan Elapsed { get; set; }
+        public TimeSpan? EstimatedRemaining { get; set; } // null when not yet estimable
     }
 
     /// <summary>

@@ -458,7 +458,82 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _progressValue, value);
         }
 
-        public string VersionInfo => "v5.0 build 1.3.0";
+        // ---- Live performance metrics (Tier 2) ----
+        private bool _showPerformanceMonitor;
+        public bool ShowPerformanceMonitor
+        {
+            get => _showPerformanceMonitor;
+            set => SetProperty(ref _showPerformanceMonitor, value);
+        }
+
+        private string _transferSpeedDisplay = "—";
+        public string TransferSpeedDisplay
+        {
+            get => _transferSpeedDisplay;
+            set => SetProperty(ref _transferSpeedDisplay, value);
+        }
+
+        private string _etaDisplay = "—";
+        public string EtaDisplay
+        {
+            get => _etaDisplay;
+            set => SetProperty(ref _etaDisplay, value);
+        }
+
+        private string _filesPerSecondDisplay = "—";
+        public string FilesPerSecondDisplay
+        {
+            get => _filesPerSecondDisplay;
+            set => SetProperty(ref _filesPerSecondDisplay, value);
+        }
+
+        private string _dataProgressDisplay = "—";
+        public string DataProgressDisplay
+        {
+            get => _dataProgressDisplay;
+            set => SetProperty(ref _dataProgressDisplay, value);
+        }
+
+        private string _currentFileDisplay = "";
+        public string CurrentFileDisplay
+        {
+            get => _currentFileDisplay;
+            set => SetProperty(ref _currentFileDisplay, value);
+        }
+
+        /// <summary>Formats a byte count as B/KB/MB/GB/TB.</summary>
+        private static string FormatBytes(double bytes)
+        {
+            string[] units = { "B", "KB", "MB", "GB", "TB", "PB" };
+            int i = 0;
+            while (bytes >= 1024 && i < units.Length - 1) { bytes /= 1024; i++; }
+            return $"{bytes:0.##} {units[i]}";
+        }
+
+        /// <summary>Formats a TimeSpan compactly (e.g. "3m 12s", "45s").</summary>
+        private static string FormatEta(TimeSpan? span)
+        {
+            if (span == null) return "—";
+            var t = span.Value;
+            if (t.TotalHours >= 1) return $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s";
+            if (t.TotalMinutes >= 1) return $"{t.Minutes}m {t.Seconds}s";
+            return $"{t.Seconds}s";
+        }
+
+        /// <summary>
+        /// Updates the live performance-metric display properties from a progress report.
+        /// </summary>
+        private void UpdatePerformanceMetrics(Services.OperationProgress p)
+        {
+            ShowPerformanceMonitor = true;
+            TransferSpeedDisplay = $"{FormatBytes(p.BytesPerSecond)}/s";
+            EtaDisplay = FormatEta(p.EstimatedRemaining);
+            FilesPerSecondDisplay = $"{p.FilesPerSecond:0.0} files/s";
+            DataProgressDisplay = $"{FormatBytes(p.BytesProcessed)} / {FormatBytes(p.TotalBytes)}";
+            CurrentFileDisplay = p.CurrentFile ?? "";
+        }
+
+        public string VersionInfo => "v5.0 build 1.3.1";
 
         // Item sources for the Automation tab combos
         public List<RuleConditionType> RuleConditionTypes { get; } =
@@ -749,6 +824,7 @@ namespace FileOrganizer.ViewModels
         public ICommand StopScheduleCommand { get; }
         public ICommand RunSweepNowCommand { get; }
         public ICommand ClearAutomationLogCommand { get; }
+        public ICommand ReRunOperationCommand { get; }
         
         #endregion
 
@@ -802,6 +878,7 @@ namespace FileOrganizer.ViewModels
             StopScheduleCommand = new RelayCommand(_ => StopSchedule());
             RunSweepNowCommand = new RelayCommand(async _ => await RunSweepNow());
             ClearAutomationLogCommand = new RelayCommand(_ => AutomationLog.Clear());
+            ReRunOperationCommand = new RelayCommand(ReRunOperation);
             RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
@@ -1969,6 +2046,7 @@ namespace FileOrganizer.ViewModels
                     StatusMessage = $"Moving... {p.PercentComplete:F1}% ({p.ProcessedFiles}/{p.TotalFiles}) - {p.CurrentFile}";
                     MovedCount = p.ProcessedFiles;
                     PendingCount = p.TotalFiles - p.ProcessedFiles;
+                    UpdatePerformanceMetrics(p);
 
                     // Update resume state periodically
                     _filesProcessedSinceLastSave++;
@@ -1992,6 +2070,7 @@ namespace FileOrganizer.ViewModels
                 LastOperationDuration = FormatDuration(duration);
 
                 ProgressValue = 0;
+                ShowPerformanceMonitor = false;
                 MovedCount = opResult.SuccessCount;
                 FailedCount = opResult.FailedCount;
                 PendingCount = 0;
@@ -2106,6 +2185,7 @@ namespace FileOrganizer.ViewModels
                     StatusMessage = $"Copying... {p.PercentComplete:F1}% ({p.ProcessedFiles}/{p.TotalFiles}) - {p.CurrentFile}";
                     MovedCount = p.ProcessedFiles; // Reusing MovedCount for copied files
                     PendingCount = p.TotalFiles - p.ProcessedFiles;
+                    UpdatePerformanceMetrics(p);
 
                     // Update resume state periodically
                     _filesProcessedSinceLastSave++;
@@ -2129,6 +2209,7 @@ namespace FileOrganizer.ViewModels
                 LastOperationDuration = FormatDuration(duration);
 
                 ProgressValue = 0;
+                ShowPerformanceMonitor = false;
                 MovedCount = opResult.SuccessCount;
                 FailedCount = opResult.FailedCount;
                 PendingCount = 0;
@@ -2893,6 +2974,25 @@ namespace FileOrganizer.ViewModels
             StatusMessage = "Sweep complete.";
         }
 
+        // Re-run a past operation (Tier 2): repopulate its settings for review, don't auto-execute.
+        private void ReRunOperation(object parameter)
+        {
+            if (parameter is HistoryEntry entry)
+            {
+                if (!entry.CanReRun)
+                {
+                    StatusMessage = "This history item can't be re-run (no saved source/destination).";
+                    return;
+                }
+
+                SourceFolder = entry.SourceFolder;
+                DestinationFolder = entry.DestinationFolder;
+                OperationMode = entry.Mode == "Copy" ? FileOperationMode.Copy : FileOperationMode.Move;
+
+                StatusMessage = $"Re-run ready: {entry.Mode} from \"{entry.SourceFolder}\". Open the Operations tab, scan, review, then run.";
+            }
+        }
+
         private void RefreshStatistics()
         {
             StatusMessage = "Statistics refreshed";
@@ -2952,7 +3052,10 @@ namespace FileOrganizer.ViewModels
                 FilesVerified = filesVerified,
                 VerificationPassed = verificationPassed,
                 VerificationFailed = verificationFailed,
-                VerificationRetried = verificationRetried
+                VerificationRetried = verificationRetried,
+                // Capture the folders so a Move/Copy operation can be re-run later.
+                SourceFolder = (mode == "Move" || mode == "Copy") ? SourceFolder : "",
+                DestinationFolder = (mode == "Move" || mode == "Copy") ? DestinationFolder : ""
             };
 
             History.Insert(0, entry);
