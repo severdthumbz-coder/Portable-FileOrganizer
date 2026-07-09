@@ -25,7 +25,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.1" 
+                    <TextBlock Text="v5.0 build 1.4.2" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -375,6 +375,41 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <!-- Build 1.4.2 -->
+                    <TextBlock Text="Build 1.4.2 - Feature ViewModels Extracted (Refactor Step 2)" 
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• SearchViewModel and AutomationViewModel - The Search and Automation tabs now have their own ViewModels, each owning its state, commands, and services" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Decoupled via interfaces - Child ViewModels depend on IStatusSink (to write the status bar) and ITransferSettingsProvider (to honour your transfer settings), not on MainViewModel" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• MainViewModel shrank by ~500 lines - 18 commands, 16 properties, and 3 collections moved out to where they belong" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Shared ViewModelBase - Common property-change plumbing extracted, with the same implementation as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• No behavior change - The two tabs bind to their child ViewModels, so every control, command, and setting works exactly as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Build 1.4.1 -->

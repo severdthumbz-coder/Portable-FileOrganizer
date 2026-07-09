@@ -12,7 +12,7 @@ using FileOrganizer.Services;
 
 namespace FileOrganizer.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged
+    public class MainViewModel : INotifyPropertyChanged, IStatusSink, ITransferSettingsProvider
     {
         #region Fields
         
@@ -533,13 +533,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.1";
-
-        // Item sources for the Automation tab combos
-        public List<RuleConditionType> RuleConditionTypes { get; } =
-            System.Enum.GetValues(typeof(RuleConditionType)).Cast<RuleConditionType>().ToList();
-        public List<RuleMatchMode> RuleMatchModes { get; } =
-            System.Enum.GetValues(typeof(RuleMatchMode)).Cast<RuleMatchMode>().ToList();
+        public string VersionInfo => "v5.0 build 1.4.2";
 
 
         private string _lastOperationDuration = "";
@@ -700,108 +694,29 @@ namespace FileOrganizer.ViewModels
         public ObservableCollection<HistoryEntry> History { get; } = new ObservableCollection<HistoryEntry>();
         public ObservableCollection<ExceptionFilter> Exceptions { get; } = new ObservableCollection<ExceptionFilter>();
 
-        // ---- Automation (Tier 1) ----
-        public ObservableCollection<OrganizationRule> Rules { get; } = new ObservableCollection<OrganizationRule>();
-        public ObservableCollection<string> WatchFolders { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> AutomationLog { get; } = new ObservableCollection<string>();
+        // ---- Feature ViewModels (extracted in Build 1.4.2) ----
+        // The Automation and Search tabs bind to these child ViewModels. Each owns its own
+        // state and depends only on IStatusSink / ITransferSettingsProvider, not on this class.
+        public AutomationViewModel Automation { get; }
+        public SearchViewModel Search { get; }
 
-        // ---- Search (Tier 3) ----
-        public ObservableCollection<Services.SearchHit> SearchResults { get; } = new ObservableCollection<Services.SearchHit>();
-        private System.Threading.CancellationTokenSource _searchCts;
+        // ---- IStatusSink ----
+        // Lets child ViewModels write to the shared status bar without knowing about this class.
+        void IStatusSink.SetStatus(string message) => StatusMessage = message;
 
-        private string _searchQuery = "";
-        public string SearchQuery
+        // ---- ITransferSettingsProvider ----
+        // Exposes the shared transfer settings the automation features must honour.
+        IEnumerable<string> ITransferSettingsProvider.SourceFolders => SourceFolders;
+
+        Config ITransferSettingsProvider.BuildAutomationConfig() => new Config
         {
-            get => _searchQuery;
-            set => SetProperty(ref _searchQuery, value);
-        }
-
-        private string _searchFolder = "";
-        public string SearchFolder
-        {
-            get => _searchFolder;
-            set => SetProperty(ref _searchFolder, value);
-        }
-
-        private bool _searchContents = true;
-        public bool SearchContents
-        {
-            get => _searchContents;
-            set => SetProperty(ref _searchContents, value);
-        }
-
-        private bool _searchIncludeSubfolders = true;
-        public bool SearchIncludeSubfolders
-        {
-            get => _searchIncludeSubfolders;
-            set => SetProperty(ref _searchIncludeSubfolders, value);
-        }
-
-        private bool _isSearching;
-        public bool IsSearching
-        {
-            get => _isSearching;
-            set => SetProperty(ref _isSearching, value);
-        }
-
-        private string _searchStatus = "Enter a search term and choose a folder.";
-        public string SearchStatus
-        {
-            get => _searchStatus;
-            set => SetProperty(ref _searchStatus, value);
-        }
-
-        private FolderWatcherService _folderWatcher;
-        private ScheduledSortService _scheduler;
-
-        private bool _watchIncludeSubfolders;
-        public bool WatchIncludeSubfolders
-        {
-            get => _watchIncludeSubfolders;
-            set => SetProperty(ref _watchIncludeSubfolders, value);
-        }
-
-        private bool _isWatching;
-        public bool IsWatching
-        {
-            get => _isWatching;
-            set => SetProperty(ref _isWatching, value);
-        }
-
-        private bool _scheduleEnabled;
-        public bool ScheduleEnabled
-        {
-            get => _scheduleEnabled;
-            set => SetProperty(ref _scheduleEnabled, value);
-        }
-
-        private int _scheduleIntervalMinutes = 60;
-        public int ScheduleIntervalMinutes
-        {
-            get => _scheduleIntervalMinutes;
-            set => SetProperty(ref _scheduleIntervalMinutes, value);
-        }
-
-        private bool _scheduleRunOnStart;
-        public bool ScheduleRunOnStart
-        {
-            get => _scheduleRunOnStart;
-            set => SetProperty(ref _scheduleRunOnStart, value);
-        }
-
-        private bool _isScheduleRunning;
-        public bool IsScheduleRunning
-        {
-            get => _isScheduleRunning;
-            set => SetProperty(ref _isScheduleRunning, value);
-        }
-
-        private OrganizationRule _selectedRule;
-        public OrganizationRule SelectedRule
-        {
-            get => _selectedRule;
-            set => SetProperty(ref _selectedRule, value);
-        }
+            CopyEngine = CopyEngine.CustomFast, // automation uses the safe default engine
+            PreserveTimestamps = PreserveTimestamps,
+            VerificationMode = VerificationMode,
+            VerifyExternalCopies = VerifyExternalCopies,
+            RetryAttempts = RetryAttempts,
+            RetryDelaySeconds = RetryDelaySeconds
+        };
 
         // Queue counters
         private int _pendingCount = 0;
@@ -855,29 +770,7 @@ namespace FileOrganizer.ViewModels
         public ICommand RemoveExceptionCommand { get; }
         public ICommand RefreshStatisticsCommand { get; }
         public ICommand TestNotificationsCommand { get; }
-
-        // Automation (Tier 1) commands
-        public ICommand AddRuleCommand { get; }
-        public ICommand RemoveRuleCommand { get; }
-        public ICommand AddRuleConditionCommand { get; }
-        public ICommand RemoveRuleConditionCommand { get; }
-        public ICommand BrowseRuleDestinationCommand { get; }
-        public ICommand AddWatchFolderCommand { get; }
-        public ICommand RemoveWatchFolderCommand { get; }
-        public ICommand StartWatchingCommand { get; }
-        public ICommand StopWatchingCommand { get; }
-        public ICommand StartScheduleCommand { get; }
-        public ICommand StopScheduleCommand { get; }
-        public ICommand RunSweepNowCommand { get; }
-        public ICommand ClearAutomationLogCommand { get; }
         public ICommand ReRunOperationCommand { get; }
-
-        // Search (Tier 3) commands
-        public ICommand RunSearchCommand { get; }
-        public ICommand CancelSearchCommand { get; }
-        public ICommand BrowseSearchFolderCommand { get; }
-        public ICommand OpenSearchHitFolderCommand { get; }
-        public ICommand ClearSearchResultsCommand { get; }
         
         #endregion
 
@@ -891,6 +784,11 @@ namespace FileOrganizer.ViewModels
             _historyManager = new Services.HistoryManager();
             _resumeStateManager = new Services.ResumeStateManager();
             _toastService = new Services.ToastNotificationService();
+
+            // Feature ViewModels. They receive narrow interfaces (this object implements both)
+            // rather than a reference to MainViewModel itself.
+            Automation = new AutomationViewModel(this, this);
+            Search = new SearchViewModel(this);
             
             // Initialize commands
             BrowseSourceCommand = new RelayCommand(_ => BrowseSource());
@@ -916,29 +814,7 @@ namespace FileOrganizer.ViewModels
             ClearQueueCommand = new RelayCommand(_ => ClearQueue());
             AddExceptionCommand = new RelayCommand(_ => AddException());
             RemoveExceptionCommand = new RelayCommand(RemoveException);
-
-            // Automation (Tier 1) command wiring
-            AddRuleCommand = new RelayCommand(_ => AddRule());
-            RemoveRuleCommand = new RelayCommand(RemoveRule);
-            AddRuleConditionCommand = new RelayCommand(_ => AddRuleCondition());
-            RemoveRuleConditionCommand = new RelayCommand(RemoveRuleCondition);
-            BrowseRuleDestinationCommand = new RelayCommand(_ => BrowseRuleDestination());
-            AddWatchFolderCommand = new RelayCommand(_ => AddWatchFolder());
-            RemoveWatchFolderCommand = new RelayCommand(RemoveWatchFolder);
-            StartWatchingCommand = new RelayCommand(_ => StartWatching());
-            StopWatchingCommand = new RelayCommand(_ => StopWatching());
-            StartScheduleCommand = new RelayCommand(_ => StartSchedule());
-            StopScheduleCommand = new RelayCommand(_ => StopSchedule());
-            RunSweepNowCommand = new RelayCommand(async _ => await RunSweepNow());
-            ClearAutomationLogCommand = new RelayCommand(_ => AutomationLog.Clear());
             ReRunOperationCommand = new RelayCommand(ReRunOperation);
-
-            // Search (Tier 3) command wiring
-            RunSearchCommand = new RelayCommand(async _ => await RunSearchAsync());
-            CancelSearchCommand = new RelayCommand(_ => _searchCts?.Cancel());
-            BrowseSearchFolderCommand = new RelayCommand(_ => BrowseSearchFolder());
-            OpenSearchHitFolderCommand = new RelayCommand(OpenSearchHitFolder);
-            ClearSearchResultsCommand = new RelayCommand(_ => { SearchResults.Clear(); SearchStatus = "Results cleared."; });
             RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
@@ -1153,13 +1029,13 @@ namespace FileOrganizer.ViewModels
                 config.SourceFolders.AddRange(SourceFolders);
                 config.Exceptions.AddRange(Exceptions);
 
-                // Automation (Tier 1) persistence
-                config.Rules.AddRange(Rules);
-                config.WatchFolders.AddRange(WatchFolders);
-                config.WatchIncludeSubfolders = WatchIncludeSubfolders;
-                config.ScheduleEnabled = ScheduleEnabled;
-                config.ScheduleIntervalMinutes = ScheduleIntervalMinutes;
-                config.ScheduleRunOnStart = ScheduleRunOnStart;
+                // Automation (Tier 1) persistence — state now lives in the child ViewModel
+                config.Rules.AddRange(Automation.Rules);
+                config.WatchFolders.AddRange(Automation.WatchFolders);
+                config.WatchIncludeSubfolders = Automation.WatchIncludeSubfolders;
+                config.ScheduleEnabled = Automation.ScheduleEnabled;
+                config.ScheduleIntervalMinutes = Automation.ScheduleIntervalMinutes;
+                config.ScheduleRunOnStart = Automation.ScheduleRunOnStart;
 
                 if (_configManager.SaveConfig(config))
                 {
@@ -2828,212 +2704,6 @@ namespace FileOrganizer.ViewModels
             }
         }
 
-        // ======================= Automation (Tier 1) =======================
-
-        private void AddRule()
-        {
-            var rule = new OrganizationRule { Name = "New Rule" };
-            rule.Conditions.Add(new RuleCondition());
-            Rules.Add(rule);
-            SelectedRule = rule;
-            StatusMessage = "Rule added — set its conditions and destination.";
-        }
-
-        private void RemoveRule(object parameter)
-        {
-            if (parameter is OrganizationRule rule)
-            {
-                var confirm = System.Windows.MessageBox.Show(
-                    $"Remove rule \"{rule.Name}\"?",
-                    "Confirm Remove Rule",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-                if (confirm == System.Windows.MessageBoxResult.Yes)
-                {
-                    Rules.Remove(rule);
-                    if (SelectedRule == rule) SelectedRule = null;
-                    StatusMessage = "Rule removed.";
-                }
-            }
-        }
-
-        private void AddRuleCondition()
-        {
-            if (SelectedRule == null)
-            {
-                StatusMessage = "Select a rule first, then add a condition.";
-                return;
-            }
-            SelectedRule.Conditions.Add(new RuleCondition());
-            OnPropertyChanged(nameof(SelectedRule));
-            StatusMessage = "Condition added to rule.";
-        }
-
-        private void RemoveRuleCondition(object parameter)
-        {
-            if (SelectedRule != null && parameter is RuleCondition condition)
-            {
-                SelectedRule.Conditions.Remove(condition);
-                OnPropertyChanged(nameof(SelectedRule));
-                StatusMessage = "Condition removed.";
-            }
-        }
-
-        private void BrowseRuleDestination()
-        {
-            if (SelectedRule == null)
-            {
-                StatusMessage = "Select a rule first.";
-                return;
-            }
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                SelectedRule.DestinationFolder = dialog.SelectedPath;
-                OnPropertyChanged(nameof(SelectedRule));
-                StatusMessage = $"Rule destination set: {dialog.SelectedPath}";
-            }
-        }
-
-        private void AddWatchFolder()
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                if (!WatchFolders.Contains(dialog.SelectedPath))
-                {
-                    WatchFolders.Add(dialog.SelectedPath);
-                    StatusMessage = $"Watch folder added: {dialog.SelectedPath}";
-                }
-            }
-        }
-
-        private void RemoveWatchFolder(object parameter)
-        {
-            if (parameter is string folder)
-            {
-                WatchFolders.Remove(folder);
-                StatusMessage = "Watch folder removed.";
-            }
-        }
-
-        private RuleEngine BuildRuleEngine() => new RuleEngine(Rules.ToList());
-
-        private MoveEngine BuildAutomationMoveEngine()
-        {
-            var config = new Config
-            {
-                CopyEngine = CopyEngine.CustomFast, // automation uses the safe default engine
-                PreserveTimestamps = PreserveTimestamps,
-                VerificationMode = VerificationMode,
-                VerifyExternalCopies = VerifyExternalCopies,
-                RetryAttempts = RetryAttempts,
-                RetryDelaySeconds = RetryDelaySeconds
-            };
-            return new MoveEngine(config);
-        }
-
-        private void AppendAutomationLog(string line)
-        {
-            var stamped = $"{DateTime.Now:HH:mm:ss}  {line}";
-            // Marshal to the UI thread; watcher callbacks arrive off-thread.
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            {
-                AutomationLog.Insert(0, stamped);
-                while (AutomationLog.Count > 200) AutomationLog.RemoveAt(AutomationLog.Count - 1);
-            });
-        }
-
-        private List<string> EffectiveWatchFolders()
-        {
-            var folders = WatchFolders.ToList();
-            if (folders.Count == 0)
-                folders = SourceFolders.ToList(); // fall back to configured sources
-            return folders;
-        }
-
-        private void StartWatching()
-        {
-            if (Rules.Count == 0)
-            {
-                StatusMessage = "Add at least one rule before starting the watcher.";
-                return;
-            }
-            var folders = EffectiveWatchFolders();
-            if (folders.Count == 0)
-            {
-                StatusMessage = "Add a watch folder (or a source folder) before starting.";
-                return;
-            }
-
-            _folderWatcher?.Dispose();
-            _folderWatcher = new FolderWatcherService(BuildRuleEngine(), BuildAutomationMoveEngine());
-            _folderWatcher.Log += AppendAutomationLog;
-            _folderWatcher.Start(folders, WatchIncludeSubfolders);
-
-            IsWatching = _folderWatcher.IsRunning;
-            StatusMessage = IsWatching ? "Folder watching started." : "Could not start watcher.";
-        }
-
-        private void StopWatching()
-        {
-            _folderWatcher?.Stop();
-            IsWatching = false;
-            StatusMessage = "Folder watching stopped.";
-        }
-
-        private void StartSchedule()
-        {
-            if (Rules.Count == 0)
-            {
-                StatusMessage = "Add at least one rule before starting the scheduler.";
-                return;
-            }
-            var folders = EffectiveWatchFolders();
-            if (folders.Count == 0)
-            {
-                StatusMessage = "Add a folder to sweep before starting the scheduler.";
-                return;
-            }
-
-            _scheduler?.Dispose();
-            _scheduler = new ScheduledSortService(BuildRuleEngine(), BuildAutomationMoveEngine());
-            _scheduler.Log += AppendAutomationLog;
-            _scheduler.Start(folders, WatchIncludeSubfolders, ScheduleIntervalMinutes, ScheduleRunOnStart);
-
-            IsScheduleRunning = _scheduler.IsRunning;
-            StatusMessage = "Scheduler started.";
-        }
-
-        private void StopSchedule()
-        {
-            _scheduler?.Stop();
-            IsScheduleRunning = false;
-            StatusMessage = "Scheduler stopped.";
-        }
-
-        private async System.Threading.Tasks.Task RunSweepNow()
-        {
-            if (Rules.Count == 0)
-            {
-                StatusMessage = "Add at least one rule first.";
-                return;
-            }
-            var folders = EffectiveWatchFolders();
-            if (folders.Count == 0)
-            {
-                StatusMessage = "Add a folder to sweep first.";
-                return;
-            }
-
-            var sweeper = new ScheduledSortService(BuildRuleEngine(), BuildAutomationMoveEngine());
-            sweeper.Log += AppendAutomationLog;
-            StatusMessage = "Running one-time sweep...";
-            await sweeper.RunNowAsync();
-            sweeper.Dispose();
-            StatusMessage = "Sweep complete.";
-        }
-
         // Re-run a past operation (Tier 2): repopulate its settings for review, don't auto-execute.
         private void ReRunOperation(object parameter)
         {
@@ -3050,92 +2720,6 @@ namespace FileOrganizer.ViewModels
                 OperationMode = entry.Mode == "Copy" ? FileOperationMode.Copy : FileOperationMode.Move;
 
                 StatusMessage = $"Re-run ready: {entry.Mode} from \"{entry.SourceFolder}\". Open the Operations tab, scan, review, then run.";
-            }
-        }
-
-        // ======================= Search (Tier 3) =======================
-
-        private void BrowseSearchFolder()
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                SearchFolder = dialog.SelectedPath;
-                SearchStatus = $"Search folder: {dialog.SelectedPath}";
-            }
-        }
-
-        private void OpenSearchHitFolder(object parameter)
-        {
-            if (parameter is Services.SearchHit hit && System.IO.File.Exists(hit.FullPath))
-            {
-                try
-                {
-                    // Open Explorer with the file selected.
-                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{hit.FullPath}\"");
-                }
-                catch (Exception ex)
-                {
-                    SearchStatus = $"Could not open folder: {ex.Message}";
-                }
-            }
-        }
-
-        private async System.Threading.Tasks.Task RunSearchAsync()
-        {
-            if (string.IsNullOrWhiteSpace(SearchQuery))
-            {
-                SearchStatus = "Enter a search term first.";
-                return;
-            }
-
-            var folder = !string.IsNullOrWhiteSpace(SearchFolder) ? SearchFolder : DestinationFolder;
-            if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
-            {
-                SearchStatus = "Choose a folder to search (or set a destination folder).";
-                return;
-            }
-
-            SearchResults.Clear();
-            IsSearching = true;
-            _searchCts = new System.Threading.CancellationTokenSource();
-
-            try
-            {
-                var service = new Services.FileSearchService();
-                var progress = new Progress<Services.SearchProgress>(p =>
-                {
-                    SearchStatus = $"Scanned {p.FilesScanned} files, {p.Hits} hit(s)… {p.CurrentFile}";
-                });
-
-                var hits = await service.SearchAsync(
-                    new[] { folder },
-                    SearchQuery,
-                    SearchContents,
-                    SearchIncludeSubfolders,
-                    progress,
-                    _searchCts.Token);
-
-                foreach (var hit in hits) SearchResults.Add(hit);
-
-                if (_searchCts.IsCancellationRequested)
-                    SearchStatus = $"Search cancelled — {SearchResults.Count} result(s) found so far.";
-                else if (SearchResults.Count == 0)
-                    SearchStatus = "No matches found.";
-                else if (SearchResults.Count >= Services.FileSearchService.MaxResults)
-                    SearchStatus = $"Showing first {SearchResults.Count} results (limit reached). Narrow your search for more precision.";
-                else
-                    SearchStatus = $"{SearchResults.Count} result(s) found.";
-            }
-            catch (Exception ex)
-            {
-                SearchStatus = $"Search error: {ex.Message}";
-            }
-            finally
-            {
-                IsSearching = false;
-                _searchCts?.Dispose();
-                _searchCts = null;
             }
         }
 
@@ -3269,15 +2853,15 @@ namespace FileOrganizer.ViewModels
                         Exceptions.Add(exception);
                     }
 
-                    // Load automation (Tier 1) settings
+                    // Load automation (Tier 1) settings into the child ViewModel
                     if (config.Rules != null)
-                        foreach (var rule in config.Rules) Rules.Add(rule);
+                        foreach (var rule in config.Rules) Automation.Rules.Add(rule);
                     if (config.WatchFolders != null)
-                        foreach (var wf in config.WatchFolders) WatchFolders.Add(wf);
-                    WatchIncludeSubfolders = config.WatchIncludeSubfolders;
-                    ScheduleEnabled = config.ScheduleEnabled;
-                    ScheduleIntervalMinutes = config.ScheduleIntervalMinutes > 0 ? config.ScheduleIntervalMinutes : 60;
-                    ScheduleRunOnStart = config.ScheduleRunOnStart;
+                        foreach (var wf in config.WatchFolders) Automation.WatchFolders.Add(wf);
+                    Automation.WatchIncludeSubfolders = config.WatchIncludeSubfolders;
+                    Automation.ScheduleEnabled = config.ScheduleEnabled;
+                    Automation.ScheduleIntervalMinutes = config.ScheduleIntervalMinutes > 0 ? config.ScheduleIntervalMinutes : 60;
+                    Automation.ScheduleRunOnStart = config.ScheduleRunOnStart;
 
                     StatusMessage = "Configuration loaded";
                 }

@@ -7,7 +7,7 @@
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
         xmlns:views="clr-namespace:FileOrganizer.Views"
-        Title="Portable File Organizer v5.0 build 1.4.1" 
+        Title="Portable File Organizer v5.0 build 1.4.2" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -43,7 +43,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.1" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.2" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -159,7 +159,7 @@
                         <TextBlock Text="Automation"/>
                     </StackPanel>
                 </TabItem.Header>
-                <views:AutomationTabView/>
+                <views:AutomationTabView DataContext="{Binding Automation}"/>
             </TabItem>
 
 
@@ -171,7 +171,7 @@
                         <TextBlock Text="Search"/>
                     </StackPanel>
                 </TabItem.Header>
-                <views:SearchTabView/>
+                <views:SearchTabView DataContext="{Binding Search}"/>
             </TabItem>
 
             <!-- HISTORY TAB -->
