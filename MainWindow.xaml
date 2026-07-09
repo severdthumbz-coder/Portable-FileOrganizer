@@ -6,7 +6,7 @@
         xmlns:models="clr-namespace:FileOrganizer.Models"
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
-        Title="Portable File Organizer v5.0 build 1.3.1" 
+        Title="Portable File Organizer v5.0 build 1.4.0" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -47,7 +47,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.3.1" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.0" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -1881,6 +1881,120 @@
                 </ScrollViewer>
             </TabItem>
 
+
+            <!-- SEARCH TAB -->
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔎" FontSize="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Search"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <Grid Margin="30,20">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Search controls -->
+                    <Border Grid.Row="0"
+                           Background="{DynamicResource PanelBackgroundBrush}"
+                           BorderBrush="{DynamicResource BorderBrush}"
+                           BorderThickness="1"
+                           CornerRadius="5"
+                           Padding="20"
+                           Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="🔎" FontSize="18" Margin="0,0,10,0"/>
+                                <TextBlock Text="Find Files" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="Search by file name, and optionally inside PDFs, Word/Excel/PowerPoint documents, and text files."
+                                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Folder:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding SearchFolder, UpdateSourceTrigger=PropertyChanged}" Padding="8,6" Margin="0,0,8,0"/>
+                                <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseSearchFolderCommand}" Padding="12,6"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Search for:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="8,6" Margin="0,0,8,0"/>
+                                <Button Grid.Column="2" Content="🔎 Search" Command="{Binding RunSearchCommand}" Padding="16,6" Margin="0,0,8,0"
+                                       IsEnabled="{Binding IsSearching, Converter={StaticResource InverseBooleanConverter}}"/>
+                                <Button Grid.Column="3" Content="✕ Cancel" Command="{Binding CancelSearchCommand}" Padding="12,6"
+                                       IsEnabled="{Binding IsSearching}"/>
+                            </Grid>
+
+                            <WrapPanel>
+                                <CheckBox Content="Search inside file contents" IsChecked="{Binding SearchContents}" Foreground="{DynamicResource TextBrush}" Margin="0,0,20,0"/>
+                                <CheckBox Content="Include subfolders" IsChecked="{Binding SearchIncludeSubfolders}" Foreground="{DynamicResource TextBrush}" Margin="0,0,20,0"/>
+                                <Button Content="Clear Results" Command="{Binding ClearSearchResultsCommand}" Padding="10,4"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Results -->
+                    <DataGrid Grid.Row="1"
+                             ItemsSource="{Binding SearchResults}"
+                             AutoGenerateColumns="False"
+                             IsReadOnly="True"
+                             Background="{DynamicResource WindowBackgroundBrush}"
+                             RowBackground="{DynamicResource PanelBackgroundBrush}"
+                             AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                             BorderThickness="1"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             GridLinesVisibility="Horizontal"
+                             HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*"/>
+                            <DataGridTextColumn Header="Matched In" Binding="{Binding MatchedIn}" Width="100"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding SizeFormatted}" Width="90"/>
+                            <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedFormatted}" Width="140"/>
+                            <DataGridTextColumn Header="Snippet" Binding="{Binding Snippet}" Width="3*"/>
+                            <DataGridTextColumn Header="Folder" Binding="{Binding Directory}" Width="2*"/>
+                            <DataGridTemplateColumn Header="Open" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="📂 Open"
+                                               FontSize="11"
+                                               Padding="6,3"
+                                               Margin="2"
+                                               Cursor="Hand"
+                                               Command="{Binding DataContext.OpenSearchHitFolderCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                               CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Status -->
+                    <Border Grid.Row="2"
+                           Background="{DynamicResource PanelBackgroundBrush}"
+                           BorderBrush="{DynamicResource BorderBrush}"
+                           BorderThickness="1"
+                           CornerRadius="5"
+                           Padding="15,10"
+                           Margin="0,15,0,0">
+                        <TextBlock Text="{Binding SearchStatus}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap"/>
+                    </Border>
+                </Grid>
+            </TabItem>
+
             <!-- HISTORY TAB -->
             <TabItem>
                 <TabItem.Header>
@@ -2264,7 +2378,7 @@
                                           FontWeight="SemiBold"
                                           Foreground="{DynamicResource TextBrush}"
                                           Margin="0,10,0,5"/>
-                                <TextBlock Text="v5.0 build 1.3.1" 
+                                <TextBlock Text="v5.0 build 1.4.0" 
                                           FontSize="14" 
                                           Foreground="{DynamicResource TextSecondaryBrush}"
                                           Margin="0,0,0,5"/>
@@ -2445,6 +2559,28 @@
                                               Margin="0,3"
                                               TextWrapping="Wrap"/>
 
+                                    <TextBlock Text="9. Sort by what's inside, not just the name" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   For documents whose filenames aren't meaningful (scan_003.pdf), add a Content contains or Content matches regex condition. FileOrganizer reads text inside PDFs, Word, Excel, PowerPoint, and text files. Pair a content condition with a cheap one (like Extension is .pdf) so only relevant files are opened and read." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="10. Find anything afterward" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="   Use the Search tab to locate files by name, or tick 'Search inside file contents' to search the text within your documents. Results show a snippet of the matching text and an Open button to reveal the file in Explorer." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
                                     <TextBlock Text="Tip: Save your configuration once it's dialed in — it's reused on every launch, so you only build this setup once." 
                                               FontStyle="Italic"
                                               Foreground="{DynamicResource TextSecondaryBrush}"
@@ -2523,6 +2659,28 @@
                                               FontSize="13"
                                               Margin="0,3"
                                               TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Content-Aware Sorting" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Rules can match on the text inside files, not just filenames. Reads PDFs, Word, Excel, PowerPoint, and text/code files — so a lease is filed as a lease even when it's named scan_003.pdf. Content is read lazily and cached, and cheap conditions are checked first to avoid unnecessary disk reads." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+
+                                    <TextBlock Text="Full-Text Search" 
+                                              FontWeight="SemiBold"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              FontSize="14"
+                                              Margin="0,15,0,5"/>
+                                    <TextBlock Text="Search your organized files by name or by the text inside them. Results show where the match came from, a snippet of surrounding text, and an Open button that reveals the file in Explorer." 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
                                     
                                     <TextBlock Text="Multiple Copy Engines" 
                                               FontWeight="SemiBold"
@@ -2570,6 +2728,41 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                                     <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                                     <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <!-- Build 1.4.0 -->
+                                <TextBlock Text="Build 1.4.0 - Content-Aware Sorting &amp; Full-Text Search (Tier 3)" 
+                                          FontWeight="SemiBold"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          FontSize="16"
+                                          Margin="0,10,0,10"/>
+
+                                <StackPanel Margin="15,0,0,20">
+                                    <TextBlock Text="• Content-Aware Rules - Two new conditions, Content contains and Content matches regex, let rules match on the text inside files rather than just filenames" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Reads PDFs and Office documents - Word, Excel, PowerPoint, and text/code files are read with no extra dependency; PDF support uses the PdfPig library (Apache 2.0)" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Efficient by design - File text is extracted lazily and cached per file, and cheap conditions (name, size, date) are evaluated before any content is read" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• New Search Tab - Find files by name, or search the text inside them. Results show what matched, a snippet of surrounding text, and an Open button to reveal the file in Explorer" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
+                                    <TextBlock Text="• Safety limits - Content extraction skips files over 50 MB and truncates very long documents, so a huge file can't stall the app" 
+                                              Foreground="{DynamicResource TextSecondaryBrush}"
+                                              FontSize="13"
+                                              Margin="0,3"
+                                              TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <!-- Build 1.3.1 -->

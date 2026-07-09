@@ -21,7 +21,11 @@ namespace FileOrganizer.Models
         /// <summary>File was modified before a given date.</summary>
         ModifiedBefore,
         /// <summary>File was modified after a given date.</summary>
-        ModifiedAfter
+        ModifiedAfter,
+        /// <summary>The file's text content contains a substring (PDF/Office/text files). Case-insensitive.</summary>
+        ContentContains,
+        /// <summary>The file's text content matches a regular expression (PDF/Office/text files).</summary>
+        ContentMatchesRegex
     }
 
     /// <summary>
@@ -57,6 +61,8 @@ namespace FileOrganizer.Models
                     case RuleConditionType.SizeLessThan: return "Size less than (bytes)";
                     case RuleConditionType.ModifiedBefore: return "Modified before";
                     case RuleConditionType.ModifiedAfter: return "Modified after";
+                    case RuleConditionType.ContentContains: return "Content contains";
+                    case RuleConditionType.ContentMatchesRegex: return "Content matches regex";
                     default: return ConditionType.ToString();
                 }
             }

@@ -109,7 +109,7 @@ namespace FileOrganizer.Services
                     return;
                 }
 
-                var match = _ruleEngine.Evaluate(path);
+                var match = await _ruleEngine.EvaluateAsync(path);
                 if (!match.Matched)
                 {
                     // No rule applied — leave the file where it is.

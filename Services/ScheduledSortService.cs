@@ -118,7 +118,7 @@ namespace FileOrganizer.Services
 
                     foreach (var file in files)
                     {
-                        var match = _ruleEngine.Evaluate(file);
+                        var match = await _ruleEngine.EvaluateAsync(file);
                         if (!match.Matched) continue;
 
                         var result = await _moveEngine.OrganizeFileAsync(

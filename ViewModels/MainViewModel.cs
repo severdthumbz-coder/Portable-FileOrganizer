@@ -533,7 +533,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.3.1";
+        public string VersionInfo => "v5.0 build 1.4.0";
 
         // Item sources for the Automation tab combos
         public List<RuleConditionType> RuleConditionTypes { get; } =
@@ -705,6 +705,52 @@ namespace FileOrganizer.ViewModels
         public ObservableCollection<string> WatchFolders { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> AutomationLog { get; } = new ObservableCollection<string>();
 
+        // ---- Search (Tier 3) ----
+        public ObservableCollection<Services.SearchHit> SearchResults { get; } = new ObservableCollection<Services.SearchHit>();
+        private System.Threading.CancellationTokenSource _searchCts;
+
+        private string _searchQuery = "";
+        public string SearchQuery
+        {
+            get => _searchQuery;
+            set => SetProperty(ref _searchQuery, value);
+        }
+
+        private string _searchFolder = "";
+        public string SearchFolder
+        {
+            get => _searchFolder;
+            set => SetProperty(ref _searchFolder, value);
+        }
+
+        private bool _searchContents = true;
+        public bool SearchContents
+        {
+            get => _searchContents;
+            set => SetProperty(ref _searchContents, value);
+        }
+
+        private bool _searchIncludeSubfolders = true;
+        public bool SearchIncludeSubfolders
+        {
+            get => _searchIncludeSubfolders;
+            set => SetProperty(ref _searchIncludeSubfolders, value);
+        }
+
+        private bool _isSearching;
+        public bool IsSearching
+        {
+            get => _isSearching;
+            set => SetProperty(ref _isSearching, value);
+        }
+
+        private string _searchStatus = "Enter a search term and choose a folder.";
+        public string SearchStatus
+        {
+            get => _searchStatus;
+            set => SetProperty(ref _searchStatus, value);
+        }
+
         private FolderWatcherService _folderWatcher;
         private ScheduledSortService _scheduler;
 
@@ -825,6 +871,13 @@ namespace FileOrganizer.ViewModels
         public ICommand RunSweepNowCommand { get; }
         public ICommand ClearAutomationLogCommand { get; }
         public ICommand ReRunOperationCommand { get; }
+
+        // Search (Tier 3) commands
+        public ICommand RunSearchCommand { get; }
+        public ICommand CancelSearchCommand { get; }
+        public ICommand BrowseSearchFolderCommand { get; }
+        public ICommand OpenSearchHitFolderCommand { get; }
+        public ICommand ClearSearchResultsCommand { get; }
         
         #endregion
 
@@ -879,6 +932,13 @@ namespace FileOrganizer.ViewModels
             RunSweepNowCommand = new RelayCommand(async _ => await RunSweepNow());
             ClearAutomationLogCommand = new RelayCommand(_ => AutomationLog.Clear());
             ReRunOperationCommand = new RelayCommand(ReRunOperation);
+
+            // Search (Tier 3) command wiring
+            RunSearchCommand = new RelayCommand(async _ => await RunSearchAsync());
+            CancelSearchCommand = new RelayCommand(_ => _searchCts?.Cancel());
+            BrowseSearchFolderCommand = new RelayCommand(_ => BrowseSearchFolder());
+            OpenSearchHitFolderCommand = new RelayCommand(OpenSearchHitFolder);
+            ClearSearchResultsCommand = new RelayCommand(_ => { SearchResults.Clear(); SearchStatus = "Results cleared."; });
             RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
@@ -2990,6 +3050,92 @@ namespace FileOrganizer.ViewModels
                 OperationMode = entry.Mode == "Copy" ? FileOperationMode.Copy : FileOperationMode.Move;
 
                 StatusMessage = $"Re-run ready: {entry.Mode} from \"{entry.SourceFolder}\". Open the Operations tab, scan, review, then run.";
+            }
+        }
+
+        // ======================= Search (Tier 3) =======================
+
+        private void BrowseSearchFolder()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SearchFolder = dialog.SelectedPath;
+                SearchStatus = $"Search folder: {dialog.SelectedPath}";
+            }
+        }
+
+        private void OpenSearchHitFolder(object parameter)
+        {
+            if (parameter is Services.SearchHit hit && System.IO.File.Exists(hit.FullPath))
+            {
+                try
+                {
+                    // Open Explorer with the file selected.
+                    System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{hit.FullPath}\"");
+                }
+                catch (Exception ex)
+                {
+                    SearchStatus = $"Could not open folder: {ex.Message}";
+                }
+            }
+        }
+
+        private async System.Threading.Tasks.Task RunSearchAsync()
+        {
+            if (string.IsNullOrWhiteSpace(SearchQuery))
+            {
+                SearchStatus = "Enter a search term first.";
+                return;
+            }
+
+            var folder = !string.IsNullOrWhiteSpace(SearchFolder) ? SearchFolder : DestinationFolder;
+            if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
+            {
+                SearchStatus = "Choose a folder to search (or set a destination folder).";
+                return;
+            }
+
+            SearchResults.Clear();
+            IsSearching = true;
+            _searchCts = new System.Threading.CancellationTokenSource();
+
+            try
+            {
+                var service = new Services.FileSearchService();
+                var progress = new Progress<Services.SearchProgress>(p =>
+                {
+                    SearchStatus = $"Scanned {p.FilesScanned} files, {p.Hits} hit(s)… {p.CurrentFile}";
+                });
+
+                var hits = await service.SearchAsync(
+                    new[] { folder },
+                    SearchQuery,
+                    SearchContents,
+                    SearchIncludeSubfolders,
+                    progress,
+                    _searchCts.Token);
+
+                foreach (var hit in hits) SearchResults.Add(hit);
+
+                if (_searchCts.IsCancellationRequested)
+                    SearchStatus = $"Search cancelled — {SearchResults.Count} result(s) found so far.";
+                else if (SearchResults.Count == 0)
+                    SearchStatus = "No matches found.";
+                else if (SearchResults.Count >= Services.FileSearchService.MaxResults)
+                    SearchStatus = $"Showing first {SearchResults.Count} results (limit reached). Narrow your search for more precision.";
+                else
+                    SearchStatus = $"{SearchResults.Count} result(s) found.";
+            }
+            catch (Exception ex)
+            {
+                SearchStatus = $"Search error: {ex.Message}";
+            }
+            finally
+            {
+                IsSearching = false;
+                _searchCts?.Dispose();
+                _searchCts = null;
             }
         }
 
