@@ -1,6 +1,8 @@
 <Application x:Class="FileOrganizer.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FileOrganizer"
+             xmlns:converters="clr-namespace:FileOrganizer.Converters"
              Startup="Application_Startup">
     <Application.Resources>
         <ResourceDictionary>
@@ -8,6 +10,20 @@
                 <!-- Light Theme (Default) -->
                 <ResourceDictionary Source="Themes/LightTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!--
+                Converters live at application scope so that tab UserControls
+                (Views/*.xaml) can resolve them via StaticResource. Previously these
+                were declared in Window.Resources, which is not visible to separately
+                loaded UserControls.
+            -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:ProgressBarWidthConverter x:Key="ProgressBarWidthConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:ExpandCollapseConverter x:Key="ExpandCollapseConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <local:EnumToBoolConverter x:Key="EnumToBoolConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

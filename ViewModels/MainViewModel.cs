@@ -533,7 +533,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.0";
+        public string VersionInfo => "v5.0 build 1.4.1";
 
         // Item sources for the Automation tab combos
         public List<RuleConditionType> RuleConditionTypes { get; } =

@@ -1,0 +1,215 @@
+<UserControl x:Class="FileOrganizer.Views.OperationsTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FileOrganizer"
+             xmlns:models="clr-namespace:FileOrganizer.Models"
+             xmlns:converters="clr-namespace:FileOrganizer.Converters">
+
+    <Grid Margin="30,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Scan Operations -->
+        <Border Grid.Row="0" 
+               Background="{DynamicResource PanelBackgroundBrush}"
+               BorderBrush="{DynamicResource BorderBrush}"
+               BorderThickness="1"
+               CornerRadius="5"
+               Padding="20"
+               Margin="0,0,0,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <TextBlock Text="🔍" FontSize="18" Margin="0,0,10,0"/>
+                    <TextBlock Text="Scan Operations" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+
+                <WrapPanel Margin="0,10">
+                    <Button Content="📊 Initial Scan" 
+                           Command="{Binding InitialScanCommand}"
+                           Padding="20,12"
+                           Margin="0,0,15,0"
+                           Background="{DynamicResource AccentBrush}"
+                           Foreground="White"
+                           FontSize="14"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                    <Button Content="⚡ Quick Scan" 
+                           Command="{Binding QuickScanCommand}"
+                           Padding="20,12"
+                           Margin="0,0,15,0"
+                           Background="{DynamicResource AccentBrush}"
+                           Foreground="White"
+                           FontSize="14"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                    <Button Content="↩ Undo Last Move" 
+                           Command="{Binding UndoCommand}"
+                           Padding="20,12"
+                           Background="{DynamicResource WarningBrush}"
+                           Foreground="White"
+                           FontSize="14"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- File Queue -->
+        <Border Grid.Row="1" 
+               Background="{DynamicResource PanelBackgroundBrush}"
+               BorderBrush="{DynamicResource BorderBrush}"
+               BorderThickness="1"
+               CornerRadius="5"
+               Padding="20"
+               Margin="0,0,0,20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="📁" FontSize="18" Margin="0,0,10,0"/>
+                        <TextBlock Text="File Queue" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
+                        <TextBlock Text="Pending: " Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14"/>
+                        <TextBlock Text="{Binding PendingCount}" Foreground="{DynamicResource InfoBrush}" FontSize="14" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,20,0">
+                        <TextBlock Text="Moved: " Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14"/>
+                        <TextBlock Text="{Binding MovedCount}" Foreground="{DynamicResource SuccessBrush}" FontSize="14" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Orientation="Horizontal">
+                        <TextBlock Text="Failed: " Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14"/>
+                        <TextBlock Text="{Binding FailedCount}" Foreground="{DynamicResource ErrorBrush}" FontSize="14" FontWeight="Bold"/>
+                    </StackPanel>
+                </Grid>
+
+                <DataGrid Grid.Row="1" 
+                         ItemsSource="{Binding FileQueue}"
+                         AutoGenerateColumns="False"
+                         IsReadOnly="True"
+                         Background="{DynamicResource WindowBackgroundBrush}"
+                         RowBackground="{DynamicResource PanelBackgroundBrush}"
+                         AlternatingRowBackground="{DynamicResource WindowBackgroundBrush}"
+                         BorderThickness="1"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         GridLinesVisibility="Horizontal"
+                         HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="2*"/>
+                        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
+                        <DataGridTextColumn Header="Size" Binding="{Binding SizeFormatted}" Width="100"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Verification" Binding="{Binding VerificationMethod}" Width="120"/>
+                        <DataGridTextColumn Header="Path" Binding="{Binding SourcePath}" Width="3*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- Move Operations -->
+        <Border Grid.Row="2" 
+               Background="{DynamicResource PanelBackgroundBrush}"
+               BorderBrush="{DynamicResource BorderBrush}"
+               BorderThickness="1"
+               CornerRadius="5"
+               Padding="20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                    <TextBlock Text="🚀" FontSize="18" Margin="0,0,10,0"/>
+                    <TextBlock Text="Move Operations" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                </StackPanel>
+
+                <!-- Live Performance Monitor (Tier 2) -->
+                <Border Background="{DynamicResource WindowBackgroundBrush}"
+                       BorderBrush="{DynamicResource AccentBrush}"
+                       BorderThickness="1"
+                       CornerRadius="5"
+                       Padding="15,12"
+                       Margin="0,0,0,15"
+                       Visibility="{Binding ShowPerformanceMonitor, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="⚡" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="Live Performance" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                        <UniformGrid Columns="4">
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="SPEED" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding TransferSpeedDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="TIME REMAINING" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding EtaDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="THROUGHPUT" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding FilesPerSecondDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="DATA" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Text="{Binding DataProgressDisplay}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                        </UniformGrid>
+                        <TextBlock Text="{Binding CurrentFileDisplay}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,10,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+
+                <WrapPanel Margin="0,10" HorizontalAlignment="Center">
+                    <Button Content="👁 Dry Run (Preview)" 
+                           Command="{Binding DryRunCommand}"
+                           Padding="25,15"
+                           Margin="0,0,15,0"
+                           Background="{DynamicResource InfoBrush}"
+                           Foreground="White"
+                           FontSize="15"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                    <Button Content="✓ Live Move" 
+                           Command="{Binding LiveMoveCommand}"
+                           Visibility="{Binding ShowLiveMoveButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                           Padding="25,15"
+                           Margin="0,0,15,0"
+                           Background="{DynamicResource SuccessBrush}"
+                           Foreground="White"
+                           FontSize="15"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                    <Button Content="✓ Live Copy" 
+                           Command="{Binding LiveCopyCommand}"
+                           Visibility="{Binding ShowLiveCopyButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                           Padding="25,15"
+                           Margin="0,0,15,0"
+                           Background="{DynamicResource SuccessBrush}"
+                           Foreground="White"
+                           FontSize="15"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                    <Button Content="🗑 Clear Queue" 
+                           Command="{Binding ClearQueueCommand}"
+                           Padding="25,15"
+                           Background="{DynamicResource ErrorBrush}"
+                           Foreground="White"
+                           FontSize="15"
+                           BorderThickness="0"
+                           Cursor="Hand"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</UserControl>

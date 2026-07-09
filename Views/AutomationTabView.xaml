@@ -1,0 +1,224 @@
+<UserControl x:Class="FileOrganizer.Views.AutomationTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:FileOrganizer"
+             xmlns:models="clr-namespace:FileOrganizer.Models"
+             xmlns:converters="clr-namespace:FileOrganizer.Converters">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="30,20">
+
+            <TextBlock Text="Automation" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
+            <TextBlock Text="Define rules, then let FileOrganizer sort files automatically as they arrive (Watch) or on a schedule (Sweep)."
+                      Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,20" TextWrapping="Wrap"/>
+
+            <!-- RULES -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="20" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="📋 " FontSize="16"/>
+                        <TextBlock Text="Rules" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="Rules are evaluated top to bottom; the first matching rule wins. Order specific rules above general ones."
+                              Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                    <DataGrid ItemsSource="{Binding Rules}"
+                             SelectedItem="{Binding SelectedRule}"
+                             AutoGenerateColumns="False"
+                             CanUserAddRows="False"
+                             HeadersVisibility="Column"
+                             GridLinesVisibility="Horizontal"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Height="160"
+                             Margin="0,0,0,10">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="On" Binding="{Binding IsEnabled}" Width="40"/>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                            <DataGridTextColumn Header="Match" Binding="{Binding ConditionSummary}" Width="1.5*" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Op" Binding="{Binding OperationDisplay}" Width="60" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DestinationFolder}" Width="2*" IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <WrapPanel Margin="0,0,0,0">
+                        <Button Content="➕ Add Rule" Command="{Binding AddRuleCommand}" Padding="12,6" Margin="0,0,8,0"/>
+                        <Button Content="🗑 Remove Rule" Command="{Binding RemoveRuleCommand}" CommandParameter="{Binding SelectedRule}" Padding="12,6"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- SELECTED RULE EDITOR -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="20" Margin="0,0,0,20"
+                   Visibility="{Binding SelectedRule, Converter={StaticResource NullToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="✏️ Edit Selected Rule" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,12"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Rule name:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding SelectedRule.Name, UpdateSourceTrigger=PropertyChanged}" Padding="8,6"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Match:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                        <ComboBox SelectedItem="{Binding SelectedRule.MatchMode}" ItemsSource="{Binding RuleMatchModes}" Width="120" Padding="8,4" Margin="0,0,20,0"/>
+                        <TextBlock Text="Operation:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                        <CheckBox Content="Move (uncheck for Copy)" IsChecked="{Binding SelectedRule.IsMove}" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Conditions" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,6,0,6"/>
+                    <DataGrid ItemsSource="{Binding SelectedRule.Conditions}"
+                             AutoGenerateColumns="False"
+                             CanUserAddRows="False"
+                             HeadersVisibility="Column"
+                             GridLinesVisibility="Horizontal"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Height="120"
+                             Margin="0,0,0,8">
+                        <DataGrid.Columns>
+                            <DataGridComboBoxColumn Header="Condition"
+                                                   SelectedItemBinding="{Binding ConditionType}"
+                                                   Width="2*">
+                                <DataGridComboBoxColumn.ElementStyle>
+                                    <Style TargetType="ComboBox">
+                                        <Setter Property="ItemsSource" Value="{Binding DataContext.RuleConditionTypes, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                    </Style>
+                                </DataGridComboBoxColumn.ElementStyle>
+                                <DataGridComboBoxColumn.EditingElementStyle>
+                                    <Style TargetType="ComboBox">
+                                        <Setter Property="ItemsSource" Value="{Binding DataContext.RuleConditionTypes, RelativeSource={RelativeSource AncestorType=DataGrid}}"/>
+                                    </Style>
+                                </DataGridComboBoxColumn.EditingElementStyle>
+                            </DataGridComboBoxColumn>
+                            <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="2*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <WrapPanel Margin="0,0,0,12">
+                        <Button Content="➕ Add Condition" Command="{Binding AddRuleConditionCommand}" Padding="10,5" Margin="0,0,8,0"/>
+                    </WrapPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Destination:" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,10,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding SelectedRule.DestinationFolder, UpdateSourceTrigger=PropertyChanged}" Padding="8,6" Margin="0,0,8,0"/>
+                        <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseRuleDestinationCommand}" Padding="12,6"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- FOLDERS + WATCHING -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="20" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="👁 " FontSize="16"/>
+                        <TextBlock Text="Real-Time Watching" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="Watched folders are also used by the scheduler below. If none are set here, your configured Source folders are used."
+                              Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                    <ListBox ItemsSource="{Binding WatchFolders}" Height="90" Margin="0,0,0,8"
+                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextBrush}" FontSize="12"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <WrapPanel Margin="0,0,0,10">
+                        <Button Content="➕ Add Folder" Command="{Binding AddWatchFolderCommand}" Padding="12,6" Margin="0,0,8,0"/>
+                        <CheckBox Content="Include subfolders" IsChecked="{Binding WatchIncludeSubfolders}" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                    </WrapPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="▶ Start Watching" Command="{Binding StartWatchingCommand}" Padding="14,8" Margin="0,0,8,0"/>
+                        <Button Content="■ Stop" Command="{Binding StopWatchingCommand}" Padding="14,8" Margin="0,0,12,0"/>
+                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="● Idle"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsWatching}" Value="True">
+                                            <Setter Property="Text" Value="● Watching"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- SCHEDULING -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="20" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="⏰ " FontSize="16"/>
+                        <TextBlock Text="Scheduled Sweeps" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+                    <TextBlock Text="Periodically sweep the folders above and organize existing files that match your rules."
+                              Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Run every" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,8,0"/>
+                        <TextBox Text="{Binding ScheduleIntervalMinutes, UpdateSourceTrigger=PropertyChanged}" Width="60" Padding="8,4" Margin="0,0,8,0"/>
+                        <TextBlock Text="minutes" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,20,0"/>
+                        <CheckBox Content="Run one sweep immediately on start" IsChecked="{Binding ScheduleRunOnStart}" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="▶ Start Scheduler" Command="{Binding StartScheduleCommand}" Padding="14,8" Margin="0,0,8,0"/>
+                        <Button Content="■ Stop" Command="{Binding StopScheduleCommand}" Padding="14,8" Margin="0,0,8,0"/>
+                        <Button Content="⟳ Run Sweep Now" Command="{Binding RunSweepNowCommand}" Padding="14,8" Margin="0,0,12,0"/>
+                        <TextBlock VerticalAlignment="Center" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="● Stopped"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsScheduleRunning}" Value="True">
+                                            <Setter Property="Text" Value="● Running"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ACTIVITY LOG -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="📝 " FontSize="16"/>
+                        <TextBlock Text="Activity Log" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                        <Button Content="Clear" Command="{Binding ClearAutomationLogCommand}" Padding="10,4" Margin="15,0,0,0"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding AutomationLog}" Height="160"
+                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" FontFamily="Consolas" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>
