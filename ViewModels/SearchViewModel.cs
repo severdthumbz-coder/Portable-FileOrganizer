@@ -11,16 +11,16 @@ namespace FileOrganizer.ViewModels
     /// <summary>
     /// Owns the Search tab. Fully self-contained: it maintains its own status line
     /// (SearchStatus) and the only shared state it reads is the destination folder,
-    /// used as a fallback search root, obtained via ITransferSettingsProvider.
+    /// used as a fallback search root, obtained from SessionContext.
     /// </summary>
     public class SearchViewModel : ViewModelBase
     {
-        private readonly ITransferSettingsProvider _settings;
+        private readonly SessionContext _session;
         private CancellationTokenSource _searchCts;
 
-        public SearchViewModel(ITransferSettingsProvider settings)
+        public SearchViewModel(SessionContext session)
         {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _session = session ?? throw new ArgumentNullException(nameof(session));
 
             RunSearchCommand = new RelayCommand(async _ => await RunSearchAsync());
             CancelSearchCommand = new RelayCommand(_ => _searchCts?.Cancel());
@@ -119,7 +119,7 @@ namespace FileOrganizer.ViewModels
 
             var folder = !string.IsNullOrWhiteSpace(SearchFolder)
                 ? SearchFolder
-                : _settings.DestinationFolder;
+                : _session.DestinationFolder;
 
             if (string.IsNullOrWhiteSpace(folder) || !System.IO.Directory.Exists(folder))
             {

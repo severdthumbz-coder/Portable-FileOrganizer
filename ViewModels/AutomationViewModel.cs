@@ -15,22 +15,24 @@ namespace FileOrganizer.ViewModels
     /// scheduled sweeps.
     ///
     /// Depends only on two narrow interfaces rather than on MainViewModel:
-    ///   IStatusSink               — to report status to the shared status bar
-    ///   ITransferSettingsProvider — to honour the user's transfer settings and to fall
-    ///                               back to configured source folders
+    ///   INotificationService      — to report status / show the completion banner
+    ///   ITransferSettingsProvider — to honour the user's transfer settings
+    ///   SessionContext            — for the configured source-folder fallback
     /// </summary>
     public class AutomationViewModel : ViewModelBase, IDisposable
     {
-        private readonly IStatusSink _status;
+        private readonly INotificationService _notify;
         private readonly ITransferSettingsProvider _settings;
+        private readonly SessionContext _session;
 
         private FolderWatcherService _folderWatcher;
         private ScheduledSortService _scheduler;
 
-        public AutomationViewModel(IStatusSink status, ITransferSettingsProvider settings)
+        public AutomationViewModel(INotificationService notify, ITransferSettingsProvider settings, SessionContext session)
         {
-            _status = status ?? throw new ArgumentNullException(nameof(status));
+            _notify = notify ?? throw new ArgumentNullException(nameof(notify));
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _session = session ?? throw new ArgumentNullException(nameof(session));
 
             AddRuleCommand = new RelayCommand(_ => AddRule());
             RemoveRuleCommand = new RelayCommand(RemoveRule);
@@ -130,7 +132,7 @@ namespace FileOrganizer.ViewModels
             rule.Conditions.Add(new RuleCondition());
             Rules.Add(rule);
             SelectedRule = rule;
-            _status.SetStatus("Rule added — set its conditions and destination.");
+            _notify.SetStatus("Rule added — set its conditions and destination.");
         }
 
         private void RemoveRule(object parameter)
@@ -146,7 +148,7 @@ namespace FileOrganizer.ViewModels
                 {
                     Rules.Remove(rule);
                     if (SelectedRule == rule) SelectedRule = null;
-                    _status.SetStatus("Rule removed.");
+                    _notify.SetStatus("Rule removed.");
                 }
             }
         }
@@ -155,12 +157,12 @@ namespace FileOrganizer.ViewModels
         {
             if (SelectedRule == null)
             {
-                _status.SetStatus("Select a rule first, then add a condition.");
+                _notify.SetStatus("Select a rule first, then add a condition.");
                 return;
             }
             SelectedRule.Conditions.Add(new RuleCondition());
             OnPropertyChanged(nameof(SelectedRule));
-            _status.SetStatus("Condition added to rule.");
+            _notify.SetStatus("Condition added to rule.");
         }
 
         private void RemoveRuleCondition(object parameter)
@@ -169,7 +171,7 @@ namespace FileOrganizer.ViewModels
             {
                 SelectedRule.Conditions.Remove(condition);
                 OnPropertyChanged(nameof(SelectedRule));
-                _status.SetStatus("Condition removed.");
+                _notify.SetStatus("Condition removed.");
             }
         }
 
@@ -177,7 +179,7 @@ namespace FileOrganizer.ViewModels
         {
             if (SelectedRule == null)
             {
-                _status.SetStatus("Select a rule first.");
+                _notify.SetStatus("Select a rule first.");
                 return;
             }
             var dialog = new System.Windows.Forms.FolderBrowserDialog();
@@ -185,7 +187,7 @@ namespace FileOrganizer.ViewModels
             {
                 SelectedRule.DestinationFolder = dialog.SelectedPath;
                 OnPropertyChanged(nameof(SelectedRule));
-                _status.SetStatus($"Rule destination set: {dialog.SelectedPath}");
+                _notify.SetStatus($"Rule destination set: {dialog.SelectedPath}");
             }
         }
 
@@ -198,7 +200,7 @@ namespace FileOrganizer.ViewModels
                 if (!WatchFolders.Contains(dialog.SelectedPath))
                 {
                     WatchFolders.Add(dialog.SelectedPath);
-                    _status.SetStatus($"Watch folder added: {dialog.SelectedPath}");
+                    _notify.SetStatus($"Watch folder added: {dialog.SelectedPath}");
                 }
             }
         }
@@ -208,7 +210,7 @@ namespace FileOrganizer.ViewModels
             if (parameter is string folder)
             {
                 WatchFolders.Remove(folder);
-                _status.SetStatus("Watch folder removed.");
+                _notify.SetStatus("Watch folder removed.");
             }
         }
 
@@ -232,7 +234,7 @@ namespace FileOrganizer.ViewModels
         {
             var folders = WatchFolders.ToList();
             if (folders.Count == 0)
-                folders = _settings.SourceFolders.ToList(); // fall back to configured sources
+                folders = _session.SourceFolders.ToList(); // fall back to configured sources
             return folders;
         }
 
@@ -241,13 +243,13 @@ namespace FileOrganizer.ViewModels
         {
             if (Rules.Count == 0)
             {
-                _status.SetStatus("Add at least one rule before starting the watcher.");
+                _notify.SetStatus("Add at least one rule before starting the watcher.");
                 return;
             }
             var folders = EffectiveWatchFolders();
             if (folders.Count == 0)
             {
-                _status.SetStatus("Add a watch folder (or a source folder) before starting.");
+                _notify.SetStatus("Add a watch folder (or a source folder) before starting.");
                 return;
             }
 
@@ -257,14 +259,14 @@ namespace FileOrganizer.ViewModels
             _folderWatcher.Start(folders, WatchIncludeSubfolders);
 
             IsWatching = _folderWatcher.IsRunning;
-            _status.SetStatus(IsWatching ? "Folder watching started." : "Could not start watcher.");
+            _notify.SetStatus(IsWatching ? "Folder watching started." : "Could not start watcher.");
         }
 
         private void StopWatching()
         {
             _folderWatcher?.Stop();
             IsWatching = false;
-            _status.SetStatus("Folder watching stopped.");
+            _notify.SetStatus("Folder watching stopped.");
         }
 
         // ---- Scheduling ----
@@ -272,13 +274,13 @@ namespace FileOrganizer.ViewModels
         {
             if (Rules.Count == 0)
             {
-                _status.SetStatus("Add at least one rule before starting the scheduler.");
+                _notify.SetStatus("Add at least one rule before starting the scheduler.");
                 return;
             }
             var folders = EffectiveWatchFolders();
             if (folders.Count == 0)
             {
-                _status.SetStatus("Add a folder to sweep before starting the scheduler.");
+                _notify.SetStatus("Add a folder to sweep before starting the scheduler.");
                 return;
             }
 
@@ -288,36 +290,36 @@ namespace FileOrganizer.ViewModels
             _scheduler.Start(folders, WatchIncludeSubfolders, ScheduleIntervalMinutes, ScheduleRunOnStart);
 
             IsScheduleRunning = _scheduler.IsRunning;
-            _status.SetStatus("Scheduler started.");
+            _notify.SetStatus("Scheduler started.");
         }
 
         private void StopSchedule()
         {
             _scheduler?.Stop();
             IsScheduleRunning = false;
-            _status.SetStatus("Scheduler stopped.");
+            _notify.SetStatus("Scheduler stopped.");
         }
 
         private async Task RunSweepNow()
         {
             if (Rules.Count == 0)
             {
-                _status.SetStatus("Add at least one rule first.");
+                _notify.SetStatus("Add at least one rule first.");
                 return;
             }
             var folders = EffectiveWatchFolders();
             if (folders.Count == 0)
             {
-                _status.SetStatus("Add a folder to sweep first.");
+                _notify.SetStatus("Add a folder to sweep first.");
                 return;
             }
 
             var sweeper = new ScheduledSortService(BuildRuleEngine(), BuildAutomationMoveEngine());
             sweeper.Log += AppendAutomationLog;
-            _status.SetStatus("Running one-time sweep...");
+            _notify.SetStatus("Running one-time sweep...");
             await sweeper.RunNowAsync();
             sweeper.Dispose();
-            _status.SetStatus("Sweep complete.");
+            _notify.SetStatus("Sweep complete.");
         }
 
         public void Dispose()

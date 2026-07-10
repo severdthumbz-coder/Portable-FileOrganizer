@@ -12,7 +12,7 @@ using FileOrganizer.Services;
 
 namespace FileOrganizer.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged, IStatusSink, ITransferSettingsProvider
+    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider
     {
         #region Fields
         
@@ -22,17 +22,14 @@ namespace FileOrganizer.ViewModels
         private readonly Services.HistoryManager _historyManager;
         private readonly Services.ResumeStateManager _resumeStateManager;
         private readonly Services.ToastNotificationService _toastService;
-        private Controls.BannerNotification _bannerNotification;
+        private readonly NotificationService _notifications;
+        private readonly SessionContext _session = new SessionContext();
         
         private ScanMode _selectedScanMode = ScanMode.Auto;
         private CopyEngine _selectedCopyEngine = CopyEngine.CustomFast;
-        private FileOperationMode _operationMode = FileOperationMode.Move;
         private DestinationStructureMode _structureMode = DestinationStructureMode.PreserveStructure;
         private FileConflictResolution _conflictResolution = FileConflictResolution.Skip;
         
-        private string _sourceFolder = string.Empty;
-        private string _destinationFolder = string.Empty;
-        private bool _useMultipleSources = false;
         private bool _enableDateOrganization = false;
         private string _dateFormat = "Year\\Month (2024\\02)";
         private bool _preserveTimestamps = true; // Default to preserving timestamps
@@ -265,16 +262,17 @@ namespace FileOrganizer.ViewModels
         };
 
         // Operation Mode
+        // Backed by SessionContext (Build 1.4.3).
         public FileOperationMode OperationMode
         {
-            get => _operationMode;
+            get => _session.OperationMode;
             set
             {
-                if (SetProperty(ref _operationMode, value))
-                {
-                    OnPropertyChanged(nameof(ShowLiveMoveButton));
-                    OnPropertyChanged(nameof(ShowLiveCopyButton));
-                }
+                if (_session.OperationMode == value) return;
+                _session.OperationMode = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ShowLiveMoveButton));
+                OnPropertyChanged(nameof(ShowLiveCopyButton));
             }
         }
 
@@ -345,40 +343,58 @@ namespace FileOrganizer.ViewModels
         };
 
         // Folders
+        // Backed by SessionContext (Build 1.4.3). The property is kept here so the ~41
+        // existing references and the XAML bindings continue to work unchanged, and so the
+        // storage-detection side effect is preserved.
         public string SourceFolder
         {
-            get => _sourceFolder;
+            get => _session.SourceFolder;
             set
             {
-                if (SetProperty(ref _sourceFolder, value))
+                if (_session.SourceFolder == value) return;
+                _session.SourceFolder = value;
+                OnPropertyChanged();
+
+                // Refresh system capabilities with new source path
+                // This will detect actual storage type (HDD/SSD/NVMe)
+                if (!string.IsNullOrEmpty(value) && System.IO.Directory.Exists(value))
                 {
-                    // Refresh system capabilities with new source path
-                    // This will detect actual storage type (HDD/SSD/NVMe)
-                    if (!string.IsNullOrEmpty(value) && System.IO.Directory.Exists(value))
-                    {
-                        AdaptivePerformanceManager.Instance.RefreshCapabilities(value);
-                        
-                        // Update UI to show new storage detection
-                        OnPropertyChanged(nameof(SystemDetectedDescription));
-                        OnPropertyChanged(nameof(ScanModeDescription));
-                    }
+                    AdaptivePerformanceManager.Instance.RefreshCapabilities(value);
+
+                    // Update UI to show new storage detection
+                    OnPropertyChanged(nameof(SystemDetectedDescription));
+                    OnPropertyChanged(nameof(ScanModeDescription));
                 }
             }
         }
 
+        // Backed by SessionContext (Build 1.4.3).
         public string DestinationFolder
         {
-            get => _destinationFolder;
-            set => SetProperty(ref _destinationFolder, value);
+            get => _session.DestinationFolder;
+            set
+            {
+                if (_session.DestinationFolder == value) return;
+                _session.DestinationFolder = value;
+                OnPropertyChanged();
+            }
         }
 
+        // Backed by SessionContext (Build 1.4.3).
         public bool UseMultipleSources
         {
-            get => _useMultipleSources;
-            set => SetProperty(ref _useMultipleSources, value);
+            get => _session.UseMultipleSources;
+            set
+            {
+                if (_session.UseMultipleSources == value) return;
+                _session.UseMultipleSources = value;
+                OnPropertyChanged();
+            }
         }
 
-        public ObservableCollection<string> SourceFolders { get; } = new ObservableCollection<string>();
+        // Backed by SessionContext (Build 1.4.3) — same instance, so existing
+        // Add/Remove calls and the DataGrid binding are unaffected.
+        public ObservableCollection<string> SourceFolders => _session.SourceFolders;
 
         // Options
         public bool EnableDateOrganization
@@ -533,7 +549,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.2";
+        public string VersionInfo => "v5.0 build 1.4.3";
 
 
         private string _lastOperationDuration = "";
@@ -696,18 +712,25 @@ namespace FileOrganizer.ViewModels
 
         // ---- Feature ViewModels (extracted in Build 1.4.2) ----
         // The Automation and Search tabs bind to these child ViewModels. Each owns its own
-        // state and depends only on IStatusSink / ITransferSettingsProvider, not on this class.
+        // state and depends only on INotificationService / ITransferSettingsProvider, not on this class.
         public AutomationViewModel Automation { get; }
         public SearchViewModel Search { get; }
 
-        // ---- IStatusSink ----
-        // Lets child ViewModels write to the shared status bar without knowing about this class.
-        void IStatusSink.SetStatus(string message) => StatusMessage = message;
+        // ---- INotificationService ----
+        // Lets child ViewModels report to the user without knowing about this class.
+        void INotificationService.SetStatus(string message) => StatusMessage = message;
+        void INotificationService.ShowCompletionBanner(string operation, string statistics, string icon)
+            => _notifications.ShowCompletionBanner(operation, statistics, icon);
+
+        /// <summary>
+        /// The shared folder / operation state. Exposed so views can bind to it directly
+        /// (e.g. {Binding Session.SourceFolder}) as tabs are extracted in later steps.
+        /// </summary>
+        public SessionContext Session => _session;
 
         // ---- ITransferSettingsProvider ----
-        // Exposes the shared transfer settings the automation features must honour.
-        IEnumerable<string> ITransferSettingsProvider.SourceFolders => SourceFolders;
-
+        // Exposes only the transfer settings the automation features must honour.
+        // Folder state now comes from SessionContext.
         Config ITransferSettingsProvider.BuildAutomationConfig() => new Config
         {
             CopyEngine = CopyEngine.CustomFast, // automation uses the safe default engine
@@ -785,10 +808,14 @@ namespace FileOrganizer.ViewModels
             _resumeStateManager = new Services.ResumeStateManager();
             _toastService = new Services.ToastNotificationService();
 
+            // The notification service owns the banner control and writes the status bar.
+            // Created before the child ViewModels, which receive it.
+            _notifications = new NotificationService(msg => StatusMessage = msg);
+
             // Feature ViewModels. They receive narrow interfaces (this object implements both)
             // rather than a reference to MainViewModel itself.
-            Automation = new AutomationViewModel(this, this);
-            Search = new SearchViewModel(this);
+            Automation = new AutomationViewModel(this, this, _session);
+            Search = new SearchViewModel(_session);
             
             // Initialize commands
             BrowseSourceCommand = new RelayCommand(_ => BrowseSource());
@@ -903,28 +930,23 @@ namespace FileOrganizer.ViewModels
         /// <summary>
         /// Set the banner notification control reference (called from MainWindow)
         /// </summary>
+        /// <summary>
+        /// Called by MainWindow once the banner control exists. Forwards it to the
+        /// notification service, which now owns the control reference.
+        /// </summary>
         public void SetBannerNotification(Controls.BannerNotification banner)
         {
-            _bannerNotification = banner;
+            _notifications.AttachBanner(banner);
         }
 
         /// <summary>
-        /// Show completion banner with statistics
+        /// Show completion banner with statistics.
+        /// Kept as a private helper so the 19 existing call sites are unchanged;
+        /// the logic now lives in NotificationService.
         /// </summary>
         private void ShowCompletionBanner(string operation, string statistics, string icon = "✅")
         {
-            if (_bannerNotification != null)
-            {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                {
-                    _bannerNotification.Show(
-                        title: $"{operation.ToUpper()} COMPLETE!",
-                        message: statistics,
-                        icon: icon,
-                        autoDismissSeconds: 15  // Auto-dismiss after 15 seconds
-                    );
-                });
-            }
+            _notifications.ShowCompletionBanner(operation, statistics, icon);
         }
 
         private void AnalyzeSpace()
