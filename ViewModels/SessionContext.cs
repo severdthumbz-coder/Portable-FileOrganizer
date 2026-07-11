@@ -20,8 +20,27 @@ namespace FileOrganizer.ViewModels
         public string SourceFolder
         {
             get => _sourceFolder;
-            set => SetProperty(ref _sourceFolder, value);
+            set
+            {
+                if (SetProperty(ref _sourceFolder, value))
+                {
+                    // Storage-detection side effect lives here so that EVERY writer of
+                    // SourceFolder (the Configuration tab, a History Re-run, etc.) triggers
+                    // capability refresh — not just the MainViewModel property setter.
+                    if (!string.IsNullOrEmpty(value) && System.IO.Directory.Exists(value))
+                    {
+                        Services.AdaptivePerformanceManager.Instance.RefreshCapabilities(value);
+                    }
+                    SourceFolderChanged?.Invoke();
+                }
+            }
         }
+
+        /// <summary>
+        /// Raised after SourceFolder changes (and capabilities are refreshed) so an owner can
+        /// re-raise dependent UI notifications such as storage-detection text.
+        /// </summary>
+        public event System.Action SourceFolderChanged;
 
         private string _destinationFolder = string.Empty;
         public string DestinationFolder

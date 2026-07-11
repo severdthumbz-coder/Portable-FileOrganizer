@@ -343,9 +343,9 @@ namespace FileOrganizer.ViewModels
         };
 
         // Folders
-        // Backed by SessionContext (Build 1.4.3). The property is kept here so the ~41
-        // existing references and the XAML bindings continue to work unchanged, and so the
-        // storage-detection side effect is preserved.
+        // Backed by SessionContext (Build 1.4.3). The capability-refresh side effect now
+        // lives in SessionContext (Build 1.4.5) so a History Re-run triggers it too; this
+        // setter just forwards and re-raises the dependent UI notifications.
         public string SourceFolder
         {
             get => _session.SourceFolder;
@@ -354,17 +354,6 @@ namespace FileOrganizer.ViewModels
                 if (_session.SourceFolder == value) return;
                 _session.SourceFolder = value;
                 OnPropertyChanged();
-
-                // Refresh system capabilities with new source path
-                // This will detect actual storage type (HDD/SSD/NVMe)
-                if (!string.IsNullOrEmpty(value) && System.IO.Directory.Exists(value))
-                {
-                    AdaptivePerformanceManager.Instance.RefreshCapabilities(value);
-
-                    // Update UI to show new storage detection
-                    OnPropertyChanged(nameof(SystemDetectedDescription));
-                    OnPropertyChanged(nameof(ScanModeDescription));
-                }
             }
         }
 
@@ -549,7 +538,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.4";
+        public string VersionInfo => "v5.0 build 1.4.5";
 
 
         private string _lastOperationDuration = "";
@@ -707,7 +696,10 @@ namespace FileOrganizer.ViewModels
 
         // Collections
         public ObservableCollection<QueueEntry> FileQueue { get; } = new ObservableCollection<QueueEntry>();
-        public ObservableCollection<HistoryEntry> History { get; } = new ObservableCollection<HistoryEntry>();
+        // ---- History tab (extracted to HistoryViewModel in Build 1.4.5) ----
+        public HistoryViewModel HistoryVM { get; }
+        // Operational code adds entries via AddHistoryEntry (below); config/persistence read this.
+        public ObservableCollection<HistoryEntry> History => HistoryVM.History;
         // ---- Exceptions tab (extracted to ExceptionsViewModel in Build 1.4.4) ----
         public ExceptionsViewModel ExceptionsVM { get; }
         // The scan pipeline (ApplyExceptionFilters) and config save/load read this collection,
@@ -795,7 +787,6 @@ namespace FileOrganizer.ViewModels
         public ICommand ClearQueueCommand { get; }
         public ICommand RefreshStatisticsCommand { get; }
         public ICommand TestNotificationsCommand { get; }
-        public ICommand ReRunOperationCommand { get; }
         
         #endregion
 
@@ -814,11 +805,20 @@ namespace FileOrganizer.ViewModels
             // Created before the child ViewModels, which receive it.
             _notifications = new NotificationService(msg => StatusMessage = msg);
 
+            // When SourceFolder changes anywhere (Config tab, History Re-run), refresh the
+            // storage-detection UI text. The capability refresh itself happens in SessionContext.
+            _session.SourceFolderChanged += () =>
+            {
+                OnPropertyChanged(nameof(SystemDetectedDescription));
+                OnPropertyChanged(nameof(ScanModeDescription));
+            };
+
             // Feature ViewModels. They receive narrow interfaces (this object implements both)
             // rather than a reference to MainViewModel itself.
             Automation = new AutomationViewModel(this, this, _session);
             Search = new SearchViewModel(_session);
             ExceptionsVM = new ExceptionsViewModel(_notifications, _session);
+            HistoryVM = new HistoryViewModel(_notifications, _session, _historyManager);
             
             // Initialize commands
             BrowseSourceCommand = new RelayCommand(_ => BrowseSource());
@@ -842,7 +842,6 @@ namespace FileOrganizer.ViewModels
             LiveMoveCommand = new RelayCommand(_ => LiveMove());
             LiveCopyCommand = new RelayCommand(_ => LiveCopy());
             ClearQueueCommand = new RelayCommand(_ => ClearQueue());
-            ReRunOperationCommand = new RelayCommand(ReRunOperation);
             RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
@@ -2619,24 +2618,6 @@ namespace FileOrganizer.ViewModels
             return filtered;
         }
 
-        private void ReRunOperation(object parameter)
-        {
-            if (parameter is HistoryEntry entry)
-            {
-                if (!entry.CanReRun)
-                {
-                    StatusMessage = "This history item can't be re-run (no saved source/destination).";
-                    return;
-                }
-
-                SourceFolder = entry.SourceFolder;
-                DestinationFolder = entry.DestinationFolder;
-                OperationMode = entry.Mode == "Copy" ? FileOperationMode.Copy : FileOperationMode.Move;
-
-                StatusMessage = $"Re-run ready: {entry.Mode} from \"{entry.SourceFolder}\". Open the Operations tab, scan, review, then run.";
-            }
-        }
-
         private void RefreshStatistics()
         {
             StatusMessage = "Statistics refreshed";
@@ -2681,44 +2662,14 @@ namespace FileOrganizer.ViewModels
         }
 
         /// <summary>
-        /// Adds a history entry for an operation
+        /// Adds a history entry for an operation. Kept as a thin forwarder so the 16
+        /// operational call sites are unchanged; the logic lives in HistoryViewModel.
         /// </summary>
         private void AddHistoryEntry(string mode, int filesScanned, int successCount, string status, 
             int filesVerified = 0, int verificationPassed = 0, int verificationFailed = 0, int verificationRetried = 0)
         {
-            var entry = new HistoryEntry
-            {
-                Timestamp = DateTime.Now,
-                Mode = mode,
-                FilesScanned = filesScanned,
-                SuccessCount = successCount,
-                Status = status,
-                FilesVerified = filesVerified,
-                VerificationPassed = verificationPassed,
-                VerificationFailed = verificationFailed,
-                VerificationRetried = verificationRetried,
-                // Capture the folders so a Move/Copy operation can be re-run later.
-                SourceFolder = (mode == "Move" || mode == "Copy") ? SourceFolder : "",
-                DestinationFolder = (mode == "Move" || mode == "Copy") ? DestinationFolder : ""
-            };
-
-            History.Insert(0, entry);
-            
-            // Keep only last 50 entries in UI
-            while (History.Count > 50)
-            {
-                History.RemoveAt(History.Count - 1);
-            }
-
-            // Persist to disk
-            try
-            {
-                _historyManager.AddHistoryEntry(entry, History.ToList());
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error persisting history: {ex.Message}");
-            }
+            HistoryVM.AddEntry(mode, filesScanned, successCount, status,
+                filesVerified, verificationPassed, verificationFailed, verificationRetried);
         }
 
         private void LoadPersistedData()
@@ -2781,11 +2732,8 @@ namespace FileOrganizer.ViewModels
                 }
 
                 // Load history
-                var history = _historyManager.LoadHistory();
-                foreach (var entry in history)
-                {
-                    History.Add(entry);
-                }
+                // History load is owned by HistoryViewModel.
+                HistoryVM.LoadPersisted();
             }
             catch (Exception ex)
             {

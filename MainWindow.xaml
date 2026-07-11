@@ -7,7 +7,7 @@
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
         xmlns:views="clr-namespace:FileOrganizer.Views"
-        Title="Portable File Organizer v5.0 build 1.4.4" 
+        Title="Portable File Organizer v5.0 build 1.4.5" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -43,7 +43,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.4" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.5" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -182,7 +182,7 @@
                         <TextBlock Text="History"/>
                     </StackPanel>
                 </TabItem.Header>
-                <views:HistoryTabView/>
+                <views:HistoryTabView DataContext="{Binding HistoryVM}"/>
             </TabItem>
 
             <!-- DUPLICATES TAB -->

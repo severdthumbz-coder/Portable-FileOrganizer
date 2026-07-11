@@ -25,7 +25,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.4" 
+                    <TextBlock Text="v5.0 build 1.4.5" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -375,6 +375,36 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <!-- Build 1.4.5 -->
+                    <TextBlock Text="Build 1.4.5 - HistoryViewModel Extracted (Refactor Step 4b)" 
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• HistoryViewModel - The History tab now owns its list, its on-disk persistence, and the Re-run action" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Operational code untouched - The 16 places that record history still call one forwarding method, so scans, moves, copies, undo, and resume log exactly as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Fixed a latent Re-run issue - Storage detection now refreshes whenever the source folder changes, including via Re-run, not only when set from the Configuration tab" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• No behavior change - History displays, persists, reloads, and re-runs exactly as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Build 1.4.4 -->
