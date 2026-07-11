@@ -549,7 +549,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.3";
+        public string VersionInfo => "v5.0 build 1.4.4";
 
 
         private string _lastOperationDuration = "";
@@ -708,7 +708,11 @@ namespace FileOrganizer.ViewModels
         // Collections
         public ObservableCollection<QueueEntry> FileQueue { get; } = new ObservableCollection<QueueEntry>();
         public ObservableCollection<HistoryEntry> History { get; } = new ObservableCollection<HistoryEntry>();
-        public ObservableCollection<ExceptionFilter> Exceptions { get; } = new ObservableCollection<ExceptionFilter>();
+        // ---- Exceptions tab (extracted to ExceptionsViewModel in Build 1.4.4) ----
+        public ExceptionsViewModel ExceptionsVM { get; }
+        // The scan pipeline (ApplyExceptionFilters) and config save/load read this collection,
+        // so expose the child VM's exact instance here.
+        public ObservableCollection<ExceptionFilter> Exceptions => ExceptionsVM.Exceptions;
 
         // ---- Feature ViewModels (extracted in Build 1.4.2) ----
         // The Automation and Search tabs bind to these child ViewModels. Each owns its own
@@ -789,8 +793,6 @@ namespace FileOrganizer.ViewModels
         public ICommand LiveMoveCommand { get; }
         public ICommand LiveCopyCommand { get; }
         public ICommand ClearQueueCommand { get; }
-        public ICommand AddExceptionCommand { get; }
-        public ICommand RemoveExceptionCommand { get; }
         public ICommand RefreshStatisticsCommand { get; }
         public ICommand TestNotificationsCommand { get; }
         public ICommand ReRunOperationCommand { get; }
@@ -816,6 +818,7 @@ namespace FileOrganizer.ViewModels
             // rather than a reference to MainViewModel itself.
             Automation = new AutomationViewModel(this, this, _session);
             Search = new SearchViewModel(_session);
+            ExceptionsVM = new ExceptionsViewModel(_notifications, _session);
             
             // Initialize commands
             BrowseSourceCommand = new RelayCommand(_ => BrowseSource());
@@ -839,8 +842,6 @@ namespace FileOrganizer.ViewModels
             LiveMoveCommand = new RelayCommand(_ => LiveMove());
             LiveCopyCommand = new RelayCommand(_ => LiveCopy());
             ClearQueueCommand = new RelayCommand(_ => ClearQueue());
-            AddExceptionCommand = new RelayCommand(_ => AddException());
-            RemoveExceptionCommand = new RelayCommand(RemoveException);
             ReRunOperationCommand = new RelayCommand(ReRunOperation);
             RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
@@ -2618,115 +2619,6 @@ namespace FileOrganizer.ViewModels
             return filtered;
         }
 
-        private void AddException()
-        {
-            // First, ask if this is a folder or file
-            var typeResult = System.Windows.MessageBox.Show(
-                "Do you want to select a folder?\n\nClick 'Yes' for folder, 'No' for file, 'Cancel' to abort.",
-                "Select Exception Type",
-                System.Windows.MessageBoxButton.YesNoCancel,
-                System.Windows.MessageBoxImage.Question);
-
-            if (typeResult == System.Windows.MessageBoxResult.Cancel)
-            {
-                return;
-            }
-
-            bool isFolder = typeResult == System.Windows.MessageBoxResult.Yes;
-            string selectedPath = null;
-
-            if (isFolder)
-            {
-                // Show folder browser
-                var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
-                folderDialog.Description = "Select folder to add as exception from source";
-                
-                if (!string.IsNullOrEmpty(SourceFolder) && System.IO.Directory.Exists(SourceFolder))
-                {
-                    folderDialog.SelectedPath = SourceFolder;
-                }
-
-                if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    selectedPath = folderDialog.SelectedPath;
-                }
-            }
-            else
-            {
-                // Show file browser
-                var fileDialog = new System.Windows.Forms.OpenFileDialog();
-                fileDialog.Title = "Select file to add as exception";
-                fileDialog.Filter = "All Files (*.*)|*.*";
-                
-                if (!string.IsNullOrEmpty(SourceFolder) && System.IO.Directory.Exists(SourceFolder))
-                {
-                    fileDialog.InitialDirectory = SourceFolder;
-                }
-
-                if (fileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-                {
-                    selectedPath = fileDialog.FileName;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(selectedPath))
-            {
-                // Now ask for exception type (Exclude or Semi)
-                var excludeResult = System.Windows.MessageBox.Show(
-                    "Select Exception Type:\n\n" +
-                    "YES = Exclude\n" +
-                    "(Not copied at all, therefore not removed)\n\n" +
-                    "NO = Semi-Exclude\n" +
-                    "(Copied but only folder structure remains if folder, or just the file itself)",
-                    "Select Exception Type",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-
-                var exceptionType = excludeResult == System.Windows.MessageBoxResult.Yes 
-                    ? ExceptionType.Exclude 
-                    : ExceptionType.Semi;
-
-                Exceptions.Add(new ExceptionFilter
-                {
-                    Path = selectedPath,
-                    IsFolder = isFolder,
-                    Type = exceptionType,
-                    IsEnabled = true
-                });
-
-                string typeName = isFolder ? "folder" : "file";
-                string excTypeName = exceptionType == ExceptionType.Exclude ? "Exclude" : "Semi-Exclude";
-                StatusMessage = $"Exception added: {typeName} ({excTypeName})";
-                
-                System.Windows.MessageBox.Show(
-                    $"Exception added: {System.IO.Path.GetFileName(selectedPath)} ({excTypeName})",
-                    "Success",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
-            }
-        }
-
-        private void RemoveException(object parameter)
-        {
-            if (parameter is ExceptionFilter filter)
-            {
-                var result = System.Windows.MessageBox.Show(
-                    $"Are you sure you want to remove this exception?\n\n" +
-                    $"Path: {filter.Path}\n" +
-                    $"Type: {filter.TypeDisplay}",
-                    "Confirm Remove Exception",
-                    System.Windows.MessageBoxButton.YesNo,
-                    System.Windows.MessageBoxImage.Question);
-
-                if (result == System.Windows.MessageBoxResult.Yes)
-                {
-                    Exceptions.Remove(filter);
-                    StatusMessage = "Exception removed";
-                }
-            }
-        }
-
-        // Re-run a past operation (Tier 2): repopulate its settings for review, don't auto-execute.
         private void ReRunOperation(object parameter)
         {
             if (parameter is HistoryEntry entry)

@@ -25,7 +25,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.3" 
+                    <TextBlock Text="v5.0 build 1.4.4" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -375,6 +375,36 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <!-- Build 1.4.4 -->
+                    <TextBlock Text="Build 1.4.4 - ExceptionsViewModel Extracted (Refactor Step 4a)" 
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• ExceptionsViewModel - The Exceptions tab now has its own ViewModel, owning the filter list and the add/remove actions" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Shared collection preserved - The scan pipeline still applies your exceptions; MainViewModel exposes the same collection instance so filtering is unchanged" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Measured before moving - Coupling analysis showed Statistics, Duplicates, History, and Operations are woven into the operational core (Statistics alone is written from 33 sites), so they are being extracted carefully rather than all at once" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• No behavior change - Exceptions add/remove, multi-select removal, and persistence all work exactly as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Build 1.4.3 -->

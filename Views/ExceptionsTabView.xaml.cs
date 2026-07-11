@@ -5,8 +5,9 @@ using System.Windows.Controls;
 namespace FileOrganizer.Views
 {
     /// <summary>
-    /// Exceptions tab content. Inherits the MainWindow's DataContext (MainViewModel).
-    /// The exception removal handler moved here with its DataGrid.
+    /// Exceptions tab content. Its DataContext is an ExceptionsViewModel (set in MainWindow.xaml).
+    /// The multi-select removal handler reads the DataGrid selection, so it stays in code-behind
+    /// and delegates the actual work to the ViewModel.
     /// </summary>
     public partial class ExceptionsTabView : UserControl
     {
@@ -17,23 +18,11 @@ namespace FileOrganizer.Views
 
         private void RemoveSelectedExceptions_Click(object sender, RoutedEventArgs e)
         {
-            var viewModel = this.DataContext as ViewModels.MainViewModel;
-            if (viewModel == null) return;
-
-            var selectedItems = ExceptionsDataGrid.SelectedItems.Cast<Models.ExceptionFilter>().ToList();
-
-            if (selectedItems.Count == 0)
+            if (this.DataContext is ViewModels.ExceptionsViewModel vm)
             {
-                viewModel.StatusMessage = "No exceptions selected to remove.";
-                return;
+                var selected = ExceptionsDataGrid.SelectedItems.Cast<Models.ExceptionFilter>().ToList();
+                vm.RemoveSelected(selected);
             }
-
-            foreach (var exception in selectedItems)
-            {
-                viewModel.Exceptions.Remove(exception);
-            }
-
-            viewModel.StatusMessage = $"Removed {selectedItems.Count} exception(s).";
         }
     }
 }
