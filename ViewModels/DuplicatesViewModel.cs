@@ -55,7 +55,7 @@ namespace FileOrganizer.ViewModels
             _setProgress = setProgress ?? (_ => { });
             _formatDuration = formatDuration ?? (ts => ts.ToString());
             _setLastDuration = setLastDuration ?? (_ => { });
-            _getScanMode = getScanMode ?? (() => ScanMode.Balanced);
+            _getScanMode = getScanMode ?? (Func<ScanMode>)(() => ScanMode.Auto);
 
             DetectDuplicatesCommand = new RelayCommand(_ => DetectDuplicates());
             DeleteSelectedDuplicatesCommand = new RelayCommand(_ => DeleteSelectedDuplicates(), _ => HasSelectedDuplicates());
