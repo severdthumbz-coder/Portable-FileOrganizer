@@ -12,7 +12,7 @@ using FileOrganizer.Services;
 
 namespace FileOrganizer.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider
+    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider, IStatsSink
     {
         #region Fields
         
@@ -49,12 +49,6 @@ namespace FileOrganizer.ViewModels
         private double _wastedSpaceGB = 0.0;
         
         // Duplicate management
-        private ObservableCollection<Services.DuplicateGroup> _duplicateGroups = new ObservableCollection<Services.DuplicateGroup>();
-        private string _keepStrategy = "None";
-        private bool _useQuickScan = false;
-        private int _totalDuplicateFiles = 0;
-        private int _selectedForDeletion = 0;
-        private double _selectedDeletionSpaceGB = 0.0;
         
         // Verification statistics
         private int _totalFilesVerified = 0;
@@ -538,7 +532,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.5";
+        public string VersionInfo => "v5.0 build 1.4.6";
 
 
         private string _lastOperationDuration = "";
@@ -579,48 +573,8 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _wastedSpaceGB, value);
         }
         
-        // Duplicate Management
-        public ObservableCollection<Services.DuplicateGroup> DuplicateGroups
-        {
-            get => _duplicateGroups;
-            set => SetProperty(ref _duplicateGroups, value);
-        }
-        
-        public string KeepStrategy
-        {
-            get => _keepStrategy;
-            set
-            {
-                if (SetProperty(ref _keepStrategy, value))
-                {
-                    ApplyAutoSelect();
-                }
-            }
-        }
-        
-        public bool UseQuickScan
-        {
-            get => _useQuickScan;
-            set => SetProperty(ref _useQuickScan, value);
-        }
-        
-        public int TotalDuplicateFiles
-        {
-            get => _totalDuplicateFiles;
-            set => SetProperty(ref _totalDuplicateFiles, value);
-        }
-        
-        public int SelectedForDeletion
-        {
-            get => _selectedForDeletion;
-            set => SetProperty(ref _selectedForDeletion, value);
-        }
-        
-        public double SelectedDeletionSpaceGB
-        {
-            get => _selectedDeletionSpaceGB;
-            set => SetProperty(ref _selectedDeletionSpaceGB, value);
-        }
+        // ---- Duplicates tab (extracted to DuplicatesViewModel in Build 1.4.6) ----
+        public DuplicatesViewModel DuplicatesVM { get; }
 
         // Verification Statistics
         public int TotalFilesVerified
@@ -737,6 +691,14 @@ namespace FileOrganizer.ViewModels
             RetryDelaySeconds = RetryDelaySeconds
         };
 
+        // ---- IStatsSink ----
+        // The Duplicates tab updates the statistics read-model through this. DuplicateGroupsFound
+        // and WastedSpaceGB remain MainViewModel properties (the Statistics tab binds them);
+        // this build keeps them here until the Statistics/Operations extraction (Step 4d).
+        int IStatsSink.DuplicateGroupsFound { get => DuplicateGroupsFound; set => DuplicateGroupsFound = value; }
+        double IStatsSink.WastedSpaceGB { get => WastedSpaceGB; set => WastedSpaceGB = value; }
+        void IStatsSink.IncrementOperations() => TotalOperations++;
+
         // Queue counters
         private int _pendingCount = 0;
         private int _movedCount = 0;
@@ -774,12 +736,6 @@ namespace FileOrganizer.ViewModels
         public ICommand ClearConfigCommand { get; }
         public ICommand InitialScanCommand { get; }
         public ICommand QuickScanCommand { get; }
-        public ICommand DetectDuplicatesCommand { get; }
-        public ICommand DeleteSelectedDuplicatesCommand { get; }
-        public ICommand MoveSelectedDuplicatesCommand { get; }
-        public ICommand ExportDuplicateListCommand { get; }
-        public ICommand ClearDuplicateSelectionCommand { get; }
-        public ICommand ToggleGroupExpandCommand { get; }
         public ICommand UndoCommand { get; }
         public ICommand DryRunCommand { get; }
         public ICommand LiveMoveCommand { get; }
@@ -819,6 +775,16 @@ namespace FileOrganizer.ViewModels
             Search = new SearchViewModel(_session);
             ExceptionsVM = new ExceptionsViewModel(_notifications, _session);
             HistoryVM = new HistoryViewModel(_notifications, _session, _historyManager);
+            DuplicatesVM = new DuplicatesViewModel(
+                _notifications,
+                HistoryVM,
+                _session,
+                this,                       // IStatsSink
+                _toastService,
+                p => ProgressValue = p,     // progress bar (owned by MainViewModel)
+                FormatDuration,
+                d => LastOperationDuration = d,
+                () => SelectedScanMode);
             
             // Initialize commands
             BrowseSourceCommand = new RelayCommand(_ => BrowseSource());
@@ -831,12 +797,6 @@ namespace FileOrganizer.ViewModels
             ClearConfigCommand = new RelayCommand(_ => ClearConfig());
             InitialScanCommand = new RelayCommand(_ => InitialScan());
             QuickScanCommand = new RelayCommand(_ => QuickScan());
-            DetectDuplicatesCommand = new RelayCommand(_ => DetectDuplicates());
-            DeleteSelectedDuplicatesCommand = new RelayCommand(_ => DeleteSelectedDuplicates(), _ => HasSelectedDuplicates());
-            MoveSelectedDuplicatesCommand = new RelayCommand(_ => MoveSelectedDuplicates(), _ => HasSelectedDuplicates());
-            ExportDuplicateListCommand = new RelayCommand(_ => ExportDuplicateList(), _ => DuplicateGroups.Count > 0);
-            ClearDuplicateSelectionCommand = new RelayCommand(_ => ClearDuplicateSelection(), _ => HasSelectedDuplicates());
-            ToggleGroupExpandCommand = new RelayCommand(param => ToggleGroupExpand(param as Services.DuplicateGroup));
             UndoCommand = new RelayCommand(_ => Undo(), _ => CanUndo());
             DryRunCommand = new RelayCommand(_ => DryRun());
             LiveMoveCommand = new RelayCommand(_ => LiveMove());
@@ -1262,475 +1222,6 @@ namespace FileOrganizer.ViewModels
                 
                 // Add failed history entry
                 AddHistoryEntry("Quick Scan", 0, 0, "Failed");
-            }
-        }
-
-        private async void DetectDuplicates()
-        {
-            if (string.IsNullOrEmpty(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a source folder first.", 
-                    "No Source Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (!System.IO.Directory.Exists(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Source folder does not exist.", 
-                    "Invalid Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                return;
-            }
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            StatusMessage = "Detecting duplicates...";
-
-            // Send start notification
-            _toastService.ShowOperationStarted("Duplicate Detection", $"Scanning {SourceFolder} for duplicates");
-
-            try
-            {
-                var detector = new Services.DuplicateDetector();
-                var progress = new Progress<double>(percent =>
-                {
-                    ProgressValue = percent;
-                    StatusMessage = $"Scanning for duplicates... {percent:F1}% complete";
-                });
-
-                // Use quick scan or full scan based on setting
-                Services.DuplicateDetectionResult result;
-                if (UseQuickScan)
-                {
-                    StatusMessage = "Quick scanning for duplicates (size-based)...";
-                    result = await detector.QuickDetectDuplicatesAsync(SourceFolder, SelectedScanMode, progress);
-                }
-                else
-                {
-                    StatusMessage = "Scanning for duplicates (SHA256)...";
-                    result = await detector.DetectDuplicatesAsync(SourceFolder, SelectedScanMode, progress);
-                }
-
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                DuplicateGroupsFound = result.DuplicateGroupCount;
-                WastedSpaceGB = result.WastedSpaceGB;
-                TotalDuplicateFiles = result.TotalDuplicateFiles;
-                ProgressValue = 0;
-                
-                // Populate DuplicateGroups collection for UI
-                DuplicateGroups.Clear();
-                foreach (var group in result.DuplicateGroups)
-                {
-                    DuplicateGroups.Add(group);
-                }
-                
-                // Reset selection statistics
-                SelectedForDeletion = 0;
-                SelectedDeletionSpaceGB = 0;
-
-                StatusMessage = $"Duplicate detection complete! Found {result.DuplicateGroupCount} groups ({result.TotalDuplicateFiles} duplicate files, {result.WastedSpaceGB:F2} GB wasted) in {LastOperationDuration}";
-
-                // Show completion banner
-                string bannerMessage;
-                string bannerIcon;
-                if (result.DuplicateGroupCount > 0)
-                {
-                    bannerMessage = $"Scanned: {result.TotalFilesScanned:N0} files  |  " +
-                                   $"Found: {result.DuplicateGroupCount:N0} groups ({result.TotalDuplicateFiles:N0} duplicates)  |  " +
-                                   $"Wasted: {result.WastedSpaceGB:F2} GB  |  Duration: {LastOperationDuration}\n" +
-                                   $"→ View the Duplicates tab to manage them";
-                    bannerIcon = "🔍";
-                }
-                else
-                {
-                    bannerMessage = $"No duplicates found!  |  Scanned: {result.TotalFilesScanned:N0} files  |  Duration: {LastOperationDuration}";
-                    bannerIcon = "✨";
-                }
-                
-                ShowCompletionBanner("Duplicate Detection", bannerMessage, bannerIcon);
-
-                // Add to history
-                AddHistoryEntry("Detect Duplicates", result.TotalFilesScanned, result.DuplicateGroupCount, "Success");
-                TotalOperations++;
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                ProgressValue = 0;
-                StatusMessage = $"Duplicate detection failed: {ex.Message}";
-                
-                // Send failure notification
-                _toastService.ShowOperationFailed("Duplicate Detection", ex.Message);
-                
-                System.Windows.MessageBox.Show($"Error detecting duplicates:\n{ex.Message}",
-                    "Detection Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-
-                // Add failed history entry
-                AddHistoryEntry("Detect Duplicates", 0, 0, "Failed");
-            }
-        }
-        
-        private void ApplyAutoSelect()
-        {
-            if (KeepStrategy == "None" || DuplicateGroups.Count == 0)
-            {
-                UpdateSelectionStatistics();
-                return;
-            }
-            
-            foreach (var group in DuplicateGroups)
-            {
-                if (group.DuplicateFiles.Count == 0)
-                    continue;
-                
-                Services.DuplicateFile keepFile = null;
-                
-                switch (KeepStrategy)
-                {
-                    case "Keep Newest":
-                        keepFile = group.DuplicateFiles.OrderByDescending(f => f.ModifiedDate).First();
-                        break;
-                        
-                    case "Keep Oldest":
-                        keepFile = group.DuplicateFiles.OrderBy(f => f.ModifiedDate).First();
-                        break;
-                        
-                    case "Keep Shortest Path":
-                        keepFile = group.DuplicateFiles.OrderBy(f => f.FilePath.Length).First();
-                        break;
-                        
-                    case "Keep Longest Path":
-                        keepFile = group.DuplicateFiles.OrderByDescending(f => f.FilePath.Length).First();
-                        break;
-                }
-                
-                // Mark one to keep, rest to delete
-                foreach (var file in group.DuplicateFiles)
-                {
-                    file.IsSelected = (file != keepFile);
-                    file.IsRecommendedKeep = (file == keepFile);
-                }
-            }
-            
-            UpdateSelectionStatistics();
-        }
-        
-        private void UpdateSelectionStatistics()
-        {
-            int selectedCount = 0;
-            long selectedBytes = 0;
-            
-            foreach (var group in DuplicateGroups)
-            {
-                foreach (var file in group.DuplicateFiles)
-                {
-                    if (file.IsSelected)
-                    {
-                        selectedCount++;
-                        selectedBytes += file.FileSize;
-                    }
-                }
-            }
-            
-            SelectedForDeletion = selectedCount;
-            SelectedDeletionSpaceGB = selectedBytes / (1024.0 * 1024.0 * 1024.0);
-        }
-        
-        private bool HasSelectedDuplicates()
-        {
-            return DuplicateGroups.Any(g => g.DuplicateFiles.Any(f => f.IsSelected));
-        }
-        
-        private async void DeleteSelectedDuplicates()
-        {
-            var selectedFiles = DuplicateGroups
-                .SelectMany(g => g.DuplicateFiles)
-                .Where(f => f.IsSelected)
-                .ToList();
-            
-            if (selectedFiles.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No files selected for deletion.", 
-                    "No Selection", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            
-            // Verify at least one file is kept in each group
-            foreach (var group in DuplicateGroups)
-            {
-                var selectedInGroup = group.DuplicateFiles.Count(f => f.IsSelected);
-                if (selectedInGroup == group.DuplicateFiles.Count)
-                {
-                    System.Windows.MessageBox.Show(
-                        $"Error: All copies of a file cannot be deleted.\n\n" +
-                        $"File: {System.IO.Path.GetFileName(group.DuplicateFiles[0].FilePath)}\n\n" +
-                        $"At least one copy must be kept in each group.",
-                        "Invalid Selection",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Error);
-                    return;
-                }
-            }
-            
-            // Calculate space to free
-            var spaceToFree = selectedFiles.Sum(f => f.FileSize);
-            var spaceGB = spaceToFree / (1024.0 * 1024.0 * 1024.0);
-            
-            // Confirmation dialog
-            var result = System.Windows.MessageBox.Show(
-                $"Delete {selectedFiles.Count} duplicate files?\n\n" +
-                $"Space to free: {spaceGB:F2} GB\n\n" +
-                $"Files will be moved to Recycle Bin and can be restored if needed.",
-                "Confirm Deletion",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning);
-            
-            if (result != System.Windows.MessageBoxResult.Yes)
-                return;
-            
-            // Delete with progress
-            StatusMessage = "Deleting duplicate files...";
-            int deleted = 0;
-            int failed = 0;
-            var failedFiles = new List<string>();
-            
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            
-            foreach (var file in selectedFiles)
-            {
-                try
-                {
-                    // Move to Recycle Bin (safe delete)
-                    Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
-                        file.FilePath,
-                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
-                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
-                    
-                    deleted++;
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    failedFiles.Add($"{file.FilePath}: {ex.Message}");
-                }
-                
-                ProgressValue = ((deleted + failed) / (double)selectedFiles.Count) * 100;
-                StatusMessage = $"Deleting duplicates... {deleted + failed}/{selectedFiles.Count}";
-            }
-            
-            stopwatch.Stop();
-            ProgressValue = 0;
-            
-            // Remove deleted files from groups
-            foreach (var group in DuplicateGroups.ToList())
-            {
-                var toRemove = group.DuplicateFiles.Where(f => f.IsSelected && 
-                    !System.IO.File.Exists(f.FilePath)).ToList();
-                    
-                foreach (var file in toRemove)
-                {
-                    group.DuplicateFiles.Remove(file);
-                    group.Files.Remove(file.FilePath);
-                }
-                
-                group.FileCount = group.DuplicateFiles.Count;
-                
-                // Remove groups with only 1 file left (no longer duplicates)
-                if (group.DuplicateFiles.Count <= 1)
-                {
-                    DuplicateGroups.Remove(group);
-                }
-                else
-                {
-                    // Recalculate wasted space
-                    group.WastedSpace = group.FileSize * (group.FileCount - 1);
-                }
-            }
-            
-            // Update statistics
-            DuplicateGroupsFound = DuplicateGroups.Count;
-            TotalDuplicateFiles = DuplicateGroups.Sum(g => g.FileCount - 1);
-            WastedSpaceGB = DuplicateGroups.Sum(g => g.WastedSpace) / (1024.0 * 1024.0 * 1024.0);
-            UpdateSelectionStatistics();
-            
-            // Show results
-            StatusMessage = $"Deletion complete! Deleted {deleted} files, freed {spaceGB:F2} GB";
-            
-            var message = $"Deleted: {deleted} files  |  Failed: {failed} files  |  Space Freed: {spaceGB:F2} GB  |  Duration: {FormatDuration(stopwatch.Elapsed)}";
-            
-            if (failed > 0 && failedFiles.Count <= 3)
-            {
-                message += "\n\nFailed: " + string.Join(", ", failedFiles.Select(f => System.IO.Path.GetFileName(f)));
-            }
-            else if (failed > 0)
-            {
-                message += $"\n\n{failed} files failed (check permissions)";
-            }
-            
-            ShowCompletionBanner("Deletion", message, "🗑️");
-            
-            // Add to history
-            AddHistoryEntry("Delete Duplicates", deleted + failed, deleted, 
-                failed == 0 ? "Success" : $"Partial ({deleted}/{deleted + failed})");
-        }
-        
-        private void MoveSelectedDuplicates()
-        {
-            var selectedFiles = DuplicateGroups
-                .SelectMany(g => g.DuplicateFiles)
-                .Where(f => f.IsSelected)
-                .ToList();
-            
-            if (selectedFiles.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No files selected.", 
-                    "No Selection", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            
-            // Select destination folder
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
-                Description = "Select folder to move duplicates to:",
-                ShowNewFolderButton = true
-            };
-            
-            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-                return;
-            
-            var destinationFolder = dialog.SelectedPath;
-            
-            // Move files
-            StatusMessage = "Moving duplicate files...";
-            int moved = 0;
-            int failed = 0;
-            
-            foreach (var file in selectedFiles)
-            {
-                try
-                {
-                    var fileName = System.IO.Path.GetFileName(file.FilePath);
-                    var destPath = System.IO.Path.Combine(destinationFolder, fileName);
-                    
-                    // Handle name conflicts
-                    int counter = 1;
-                    while (System.IO.File.Exists(destPath))
-                    {
-                        var nameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(fileName);
-                        var ext = System.IO.Path.GetExtension(fileName);
-                        destPath = System.IO.Path.Combine(destinationFolder, $"{nameWithoutExt} ({counter}){ext}");
-                        counter++;
-                    }
-                    
-                    System.IO.File.Move(file.FilePath, destPath);
-                    moved++;
-                }
-                catch
-                {
-                    failed++;
-                }
-                
-                ProgressValue = ((moved + failed) / (double)selectedFiles.Count) * 100;
-            }
-            
-            ProgressValue = 0;
-            StatusMessage = $"Move complete! Moved {moved} files";
-            
-            System.Windows.MessageBox.Show(
-                $"Move Complete!\n\n" +
-                $"Moved: {moved} files\n" +
-                $"Failed: {failed} files\n" +
-                $"Destination: {destinationFolder}",
-                "Move Complete",
-                System.Windows.MessageBoxButton.OK,
-                System.Windows.MessageBoxImage.Information);
-            
-            // Refresh duplicate groups
-            var detector = new Services.DuplicateDetector();
-            DetectDuplicates();
-        }
-        
-        private void ExportDuplicateList()
-        {
-            if (DuplicateGroups.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No duplicate groups to export.", 
-                    "No Data", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
-            
-            var dialog = new System.Windows.Forms.SaveFileDialog
-            {
-                Filter = "CSV files (*.csv)|*.csv",
-                FileName = $"Duplicates_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
-                DefaultExt = "csv"
-            };
-            
-            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
-                return;
-            
-            try
-            {
-                var csv = new System.Text.StringBuilder();
-                csv.AppendLine("Group,Hash,FilePath,FileSize,Created,Modified,Selected,Recommended");
-                
-                int groupNum = 1;
-                foreach (var group in DuplicateGroups)
-                {
-                    foreach (var file in group.DuplicateFiles)
-                    {
-                        csv.AppendLine($"{groupNum}," +
-                            $"\"{group.Hash}\"," +
-                            $"\"{file.FilePath}\"," +
-                            $"{file.FileSize}," +
-                            $"{file.CreatedDate:yyyy-MM-dd HH:mm:ss}," +
-                            $"{file.ModifiedDate:yyyy-MM-dd HH:mm:ss}," +
-                            $"{file.IsSelected}," +
-                            $"{file.IsRecommendedKeep}");
-                    }
-                    groupNum++;
-                }
-                
-                System.IO.File.WriteAllText(dialog.FileName, csv.ToString());
-                
-                System.Windows.MessageBox.Show(
-                    $"Successfully exported {DuplicateGroups.Count} duplicate groups to CSV!\n\n" +
-                    $"File: {dialog.FileName}",
-                    "Export Complete",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Error exporting list:\n{ex.Message}",
-                    "Export Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-        
-        private void ClearDuplicateSelection()
-        {
-            foreach (var group in DuplicateGroups)
-            {
-                foreach (var file in group.DuplicateFiles)
-                {
-                    file.IsSelected = false;
-                    file.IsRecommendedKeep = false;
-                }
-            }
-            
-            KeepStrategy = "None";
-            UpdateSelectionStatistics();
-        }
-        
-        private void ToggleGroupExpand(Services.DuplicateGroup group)
-        {
-            if (group != null)
-            {
-                group.IsExpanded = !group.IsExpanded;
             }
         }
 
