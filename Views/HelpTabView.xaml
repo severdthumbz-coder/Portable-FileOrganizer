@@ -25,7 +25,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.6" 
+                    <TextBlock Text="v5.0 build 1.4.7" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -375,6 +375,41 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <!-- Build 1.4.7 -->
+                    <TextBlock Text="Build 1.4.7 - StatisticsViewModel Extracted (Refactor Step 4d, part 1)" 
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• StatisticsViewModel - The Statistics tab now owns all its counters (files organized, operations, data processed, verification totals, success rate) instead of MainViewModel" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Statistics is a read-model - Operational code (live move/copy, duplicate detection, resume) writes totals through a single stats channel, so the counters live in one place and the pipeline never touches them directly" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• ~29 write sites consolidated - Scattered counter increments across the Operations code now route through one RecordOperation call per batch, plus simple operation counting elsewhere" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• No behavior change - All statistics display and update exactly as before, including the duplicate figures shared with the Duplicates tab" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Next: OperationsViewModel completes the refactor (the queue, undo, and resume)" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Build 1.4.6 -->

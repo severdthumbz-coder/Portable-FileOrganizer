@@ -12,7 +12,7 @@ using FileOrganizer.Services;
 
 namespace FileOrganizer.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider, IStatsSink
+    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider
     {
         #region Fields
         
@@ -24,6 +24,7 @@ namespace FileOrganizer.ViewModels
         private readonly Services.ToastNotificationService _toastService;
         private readonly NotificationService _notifications;
         private readonly SessionContext _session = new SessionContext();
+        private IStatsSink _stats;
         
         private ScanMode _selectedScanMode = ScanMode.Auto;
         private CopyEngine _selectedCopyEngine = CopyEngine.CustomFast;
@@ -42,20 +43,10 @@ namespace FileOrganizer.ViewModels
         
         private string _statusMessage = "Ready";
         private double _progressValue = 0;
-        private int _totalFilesOrganized = 0;
-        private int _totalOperations = 0;
-        private double _dataProcessedGB = 0.0;
-        private int _duplicateGroupsFound = 0;
-        private double _wastedSpaceGB = 0.0;
         
         // Duplicate management
         
         // Verification statistics
-        private int _totalFilesVerified = 0;
-        private int _verificationPassed = 0;
-        private int _verificationFailed = 0;
-        private int _verificationRetried = 0;
-        private List<VerificationLog> _verificationLogs = new List<VerificationLog>();
         
         // Undo tracking
         private List<QueueEntry> _lastMoveOperation = new List<QueueEntry>();
@@ -532,7 +523,7 @@ namespace FileOrganizer.ViewModels
             CurrentFileDisplay = p.CurrentFile ?? "";
         }
 
-        public string VersionInfo => "v5.0 build 1.4.6";
+        public string VersionInfo => "v5.0 build 1.4.7";
 
 
         private string _lastOperationDuration = "";
@@ -542,74 +533,9 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _lastOperationDuration, value);
         }
 
-        // Statistics
-        public int TotalFilesOrganized
-        {
-            get => _totalFilesOrganized;
-            set => SetProperty(ref _totalFilesOrganized, value);
-        }
 
-        public int TotalOperations
-        {
-            get => _totalOperations;
-            set => SetProperty(ref _totalOperations, value);
-        }
-
-        public double DataProcessedGB
-        {
-            get => _dataProcessedGB;
-            set => SetProperty(ref _dataProcessedGB, value);
-        }
-
-        public int DuplicateGroupsFound
-        {
-            get => _duplicateGroupsFound;
-            set => SetProperty(ref _duplicateGroupsFound, value);
-        }
-
-        public double WastedSpaceGB
-        {
-            get => _wastedSpaceGB;
-            set => SetProperty(ref _wastedSpaceGB, value);
-        }
-        
         // ---- Duplicates tab (extracted to DuplicatesViewModel in Build 1.4.6) ----
         public DuplicatesViewModel DuplicatesVM { get; }
-
-        // Verification Statistics
-        public int TotalFilesVerified
-        {
-            get => _totalFilesVerified;
-            set => SetProperty(ref _totalFilesVerified, value);
-        }
-
-        public int VerificationPassed
-        {
-            get => _verificationPassed;
-            set => SetProperty(ref _verificationPassed, value);
-        }
-
-        public int VerificationFailed
-        {
-            get => _verificationFailed;
-            set => SetProperty(ref _verificationFailed, value);
-        }
-
-        public int VerificationRetried
-        {
-            get => _verificationRetried;
-            set => SetProperty(ref _verificationRetried, value);
-        }
-
-        public double VerificationSuccessRate
-        {
-            get => TotalFilesVerified > 0 ? (double)VerificationPassed / TotalFilesVerified * 100 : 0;
-        }
-
-        public List<VerificationLog> VerificationLogs => _verificationLogs;
-
-        public List<VerificationLog> RecentVerificationFailures => 
-            _verificationLogs.Where(x => !x.Passed).OrderByDescending(x => x.Timestamp).Take(10).ToList();
 
         // Space Analysis Results
         public bool SpaceAnalysisCompleted
@@ -691,13 +617,9 @@ namespace FileOrganizer.ViewModels
             RetryDelaySeconds = RetryDelaySeconds
         };
 
-        // ---- IStatsSink ----
-        // The Duplicates tab updates the statistics read-model through this. DuplicateGroupsFound
-        // and WastedSpaceGB remain MainViewModel properties (the Statistics tab binds them);
-        // this build keeps them here until the Statistics/Operations extraction (Step 4d).
-        int IStatsSink.DuplicateGroupsFound { get => DuplicateGroupsFound; set => DuplicateGroupsFound = value; }
-        double IStatsSink.WastedSpaceGB { get => WastedSpaceGB; set => WastedSpaceGB = value; }
-        void IStatsSink.IncrementOperations() => TotalOperations++;
+        // ---- Statistics tab (extracted to StatisticsViewModel in Build 1.4.7) ----
+        // StatisticsViewModel is the IStatsSink; operational code writes via the _stats field.
+        public StatisticsViewModel StatisticsVM { get; }
 
         // Queue counters
         private int _pendingCount = 0;
@@ -741,7 +663,6 @@ namespace FileOrganizer.ViewModels
         public ICommand LiveMoveCommand { get; }
         public ICommand LiveCopyCommand { get; }
         public ICommand ClearQueueCommand { get; }
-        public ICommand RefreshStatisticsCommand { get; }
         public ICommand TestNotificationsCommand { get; }
         
         #endregion
@@ -775,11 +696,13 @@ namespace FileOrganizer.ViewModels
             Search = new SearchViewModel(_session);
             ExceptionsVM = new ExceptionsViewModel(_notifications, _session);
             HistoryVM = new HistoryViewModel(_notifications, _session, _historyManager);
+            StatisticsVM = new StatisticsViewModel(_notifications);
+            _stats = StatisticsVM;
             DuplicatesVM = new DuplicatesViewModel(
                 _notifications,
                 HistoryVM,
                 _session,
-                this,                       // IStatsSink
+                StatisticsVM,                // IStatsSink
                 _toastService,
                 p => ProgressValue = p,     // progress bar (owned by MainViewModel)
                 FormatDuration,
@@ -802,7 +725,6 @@ namespace FileOrganizer.ViewModels
             LiveMoveCommand = new RelayCommand(_ => LiveMove());
             LiveCopyCommand = new RelayCommand(_ => LiveCopy());
             ClearQueueCommand = new RelayCommand(_ => ClearQueue());
-            RefreshStatisticsCommand = new RelayCommand(_ => RefreshStatistics());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
             // Load persisted configuration and history
@@ -1128,7 +1050,7 @@ namespace FileOrganizer.ViewModels
                 AddHistoryEntry("Initial Scan", results.Count, results.Count, "Success");
                 
                 // Update statistics
-                TotalOperations++;
+                _stats.IncrementOperations();
             }
             catch (Exception ex)
             {
@@ -1204,7 +1126,7 @@ namespace FileOrganizer.ViewModels
                 AddHistoryEntry("Quick Scan", results.Count, results.Count, "Success");
                 
                 // Update statistics
-                TotalOperations++;
+                _stats.IncrementOperations();
             }
             catch (Exception ex)
             {
@@ -1301,7 +1223,7 @@ namespace FileOrganizer.ViewModels
                 // Add to history
                 AddHistoryEntry("Undo Operation", successCount + failedCount, successCount, 
                     successCount > 0 ? "Success" : "Failed");
-                TotalOperations++;
+                _stats.IncrementOperations();
 
                 ShowCompletionBanner("Undo Complete", 
                     $"Restored: {successCount} files  |  Failed: {failedCount} files  |  Files returned to original locations", 
@@ -1372,7 +1294,7 @@ namespace FileOrganizer.ViewModels
 
                 // Add to history
                 AddHistoryEntry("Dry Run", FileQueue.Count, wouldMove, "Success");
-                TotalOperations++;
+                _stats.IncrementOperations();
                 
                 double sizeGB = totalBytes / (1024.0 * 1024.0 * 1024.0);
                 StatusMessage = $"Dry run complete! Would process {wouldMove} files ({sizeGB:F2} GB).";
@@ -1523,16 +1445,14 @@ namespace FileOrganizer.ViewModels
                 MovedCount = opResult.SuccessCount;
                 FailedCount = opResult.FailedCount;
                 PendingCount = 0;
-                TotalFilesOrganized += opResult.SuccessCount;
-                TotalOperations++;
-                DataProcessedGB += opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0);
-                
-                // Update verification statistics
-                TotalFilesVerified += opResult.FilesVerified;
-                VerificationPassed += opResult.VerificationPassed;
-                VerificationFailed += opResult.VerificationFailed;
-                VerificationRetried += opResult.VerificationRetried;
-                OnPropertyChanged(nameof(VerificationSuccessRate));
+                // Statistics are owned by StatisticsViewModel; record this batch through the sink.
+                _stats.RecordOperation(
+                    opResult.SuccessCount,
+                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
+                    opResult.FilesVerified,
+                    opResult.VerificationPassed,
+                    opResult.VerificationFailed,
+                    opResult.VerificationRetried);
 
                 // Save for undo - only save successfully moved files
                 _lastMoveOperation.Clear();
@@ -1552,7 +1472,7 @@ namespace FileOrganizer.ViewModels
                 
                 // Show completion banner
                 ShowCompletionBanner("Move Operation",
-                    $"Moved: {opResult.SuccessCount}/{opResult.TotalFiles} files ({DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
+                    $"Moved: {opResult.SuccessCount}/{opResult.TotalFiles} files ({_stats.DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
                     "📦");
             }
             catch (Exception ex)
@@ -1662,16 +1582,14 @@ namespace FileOrganizer.ViewModels
                 MovedCount = opResult.SuccessCount;
                 FailedCount = opResult.FailedCount;
                 PendingCount = 0;
-                TotalFilesOrganized += opResult.SuccessCount;
-                TotalOperations++;
-                DataProcessedGB += opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0);
-                
-                // Update verification statistics
-                TotalFilesVerified += opResult.FilesVerified;
-                VerificationPassed += opResult.VerificationPassed;
-                VerificationFailed += opResult.VerificationFailed;
-                VerificationRetried += opResult.VerificationRetried;
-                OnPropertyChanged(nameof(VerificationSuccessRate));
+                // Statistics are owned by StatisticsViewModel; record this batch through the sink.
+                _stats.RecordOperation(
+                    opResult.SuccessCount,
+                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
+                    opResult.FilesVerified,
+                    opResult.VerificationPassed,
+                    opResult.VerificationFailed,
+                    opResult.VerificationRetried);
 
                 // Clear resume state on successful completion
                 _resumeStateManager.ClearState();
@@ -1687,7 +1605,7 @@ namespace FileOrganizer.ViewModels
                 
                 // Show completion banner
                 ShowCompletionBanner("Copy Operation",
-                    $"Copied: {opResult.SuccessCount}/{opResult.TotalFiles} files ({DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
+                    $"Copied: {opResult.SuccessCount}/{opResult.TotalFiles} files ({_stats.DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
                     "📋");
             }
             catch (Exception ex)
@@ -1717,34 +1635,6 @@ namespace FileOrganizer.ViewModels
             MovedCount = 0;
             FailedCount = 0;
             StatusMessage = "Queue cleared";
-        }
-
-        /// <summary>
-        /// Logs a verification result
-        /// </summary>
-        public void LogVerification(VerificationLog log)
-        {
-            _verificationLogs.Add(log);
-            
-            TotalFilesVerified++;
-            
-            if (log.Passed)
-            {
-                VerificationPassed++;
-            }
-            else
-            {
-                VerificationFailed++;
-            }
-            
-            if (log.RetryCount > 0)
-            {
-                VerificationRetried++;
-            }
-            
-            // Update success rate
-            OnPropertyChanged(nameof(VerificationSuccessRate));
-            OnPropertyChanged(nameof(RecentVerificationFailures));
         }
 
         /// <summary>
@@ -1846,9 +1736,10 @@ namespace FileOrganizer.ViewModels
                 MovedCount = totalSuccess;
                 FailedCount = opResult.FailedCount;
                 PendingCount = 0;
-                TotalFilesOrganized += opResult.SuccessCount;
-                TotalOperations++;
-                DataProcessedGB += opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0);
+                _stats.RecordOperation(
+                    opResult.SuccessCount,
+                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
+                    0, 0, 0, 0);
 
                 // Clear resume state on successful completion
                 _resumeStateManager.ClearState();
@@ -1956,7 +1847,7 @@ namespace FileOrganizer.ViewModels
                 // Add to history
                 AddHistoryEntry("Undo from Resume", state.CompletedFiles.Count, successCount, 
                     successCount > 0 ? "Success" : "Failed");
-                TotalOperations++;
+                _stats.IncrementOperations();
 
                 ShowCompletionBanner("Undo Complete", 
                     $"Restored: {successCount} files  |  Failed: {failedCount} files  |  Incomplete operation reversed", 
@@ -2107,11 +1998,6 @@ namespace FileOrganizer.ViewModels
             }
 
             return filtered;
-        }
-
-        private void RefreshStatistics()
-        {
-            StatusMessage = "Statistics refreshed";
         }
 
         /// <summary>
