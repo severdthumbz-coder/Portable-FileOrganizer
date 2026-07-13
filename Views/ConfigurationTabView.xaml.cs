@@ -5,8 +5,8 @@ using System.Windows.Controls;
 namespace FileOrganizer.Views
 {
     /// <summary>
-    /// Configuration tab content. Inherits the MainWindow's DataContext (MainViewModel).
-    /// The source-folder removal handler moved here with its DataGrid.
+    /// Configuration tab content. DataContext is ConfigurationViewModel (Build 1.4.9).
+    /// The source-folder removal handler targets that VM's session-backed SourceFolders.
     /// </summary>
     public partial class ConfigurationTabView : UserControl
     {
@@ -17,7 +17,7 @@ namespace FileOrganizer.Views
 
         private void RemoveSelectedSourceFolders_Click(object sender, RoutedEventArgs e)
         {
-            var viewModel = this.DataContext as ViewModels.MainViewModel;
+            var viewModel = this.DataContext as ViewModels.ConfigurationViewModel;
             if (viewModel == null) return;
 
             var selectedItems = SourceFoldersDataGrid.SelectedItems.Cast<string>().ToList();

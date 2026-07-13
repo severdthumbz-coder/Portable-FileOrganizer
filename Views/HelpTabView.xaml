@@ -25,7 +25,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.8" 
+                    <TextBlock Text="v5.0 build 1.4.9" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -375,6 +375,46 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📝" FontSize="20" Margin="0,0,10,0"/>
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <!-- Build 1.4.9 -->
+                    <TextBlock Text="Build 1.4.9 - ConfigurationViewModel Extracted — God Object Fully Dismantled" 
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• ConfigurationViewModel - The Configuration tab's settings, engine detection, and space analysis now live in their own ViewModel — the final extraction of the refactor" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• MainViewModel is now purely a coordinator - Down from about 1,120 lines to roughly 500: it wires the tab ViewModels together and orchestrates cross-tab save/load, holding no tab settings of its own" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• All nine tabs are self-contained - Every tab now has its own ViewModel, each depending only on narrow shared services (notifications, session, history, statistics)" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Save/Load stays coordinated - Persistence still writes settings, folders, exceptions, and automation together; the Configuration settings block is now supplied by ConfigurationViewModel" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Minor fix - Storage-type override radio buttons now raise change notifications when cleared by selecting another option, so the UI can never show a stale selection" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• No behavior change - Every Configuration-tab control, description text, engine detection, space analysis, and save/clear works exactly as before" 
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <!-- Build 1.4.8 -->
