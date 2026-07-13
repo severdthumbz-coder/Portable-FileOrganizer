@@ -12,7 +12,7 @@ using FileOrganizer.Services;
 
 namespace FileOrganizer.ViewModels
 {
-    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider
+    public class MainViewModel : INotifyPropertyChanged, INotificationService, ITransferSettingsProvider, IOperationsSettingsProvider
     {
         #region Fields
         
@@ -42,19 +42,14 @@ namespace FileOrganizer.ViewModels
         private int _retryDelaySeconds = 2;
         
         private string _statusMessage = "Ready";
-        private double _progressValue = 0;
         
         // Duplicate management
         
         // Verification statistics
         
         // Undo tracking
-        private List<QueueEntry> _lastMoveOperation = new List<QueueEntry>();
         
         // Resume state tracking
-        private ResumeState _currentResumeState = null;
-        private int _filesProcessedSinceLastSave = 0;
-        private const int FilesPerStateSave = 10; // Save state every 10 files
         
         // Space Analysis Results
         private bool _spaceAnalysisCompleted = false;
@@ -247,7 +242,9 @@ namespace FileOrganizer.ViewModels
         };
 
         // Operation Mode
-        // Backed by SessionContext (Build 1.4.3).
+        // Backed by SessionContext (Build 1.4.3). The Live-button visibility (ShowLiveMoveButton /
+        // ShowLiveCopyButton) now lives on OperationsViewModel, which subscribes to
+        // SessionContext.OperationMode directly, so this setter no longer raises them.
         public FileOperationMode OperationMode
         {
             get => _session.OperationMode;
@@ -256,13 +253,9 @@ namespace FileOrganizer.ViewModels
                 if (_session.OperationMode == value) return;
                 _session.OperationMode = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(ShowLiveMoveButton));
-                OnPropertyChanged(nameof(ShowLiveCopyButton));
             }
         }
 
-        public bool ShowLiveMoveButton => OperationMode == FileOperationMode.Move;
-        public bool ShowLiveCopyButton => OperationMode == FileOperationMode.Copy;
 
         // Structure Mode
         public DestinationStructureMode StructureMode
@@ -442,96 +435,8 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public double ProgressValue
-        {
-            get => _progressValue;
-            set => SetProperty(ref _progressValue, value);
-        }
+        public string VersionInfo => "v5.0 build 1.4.8";
 
-        // ---- Live performance metrics (Tier 2) ----
-        private bool _showPerformanceMonitor;
-        public bool ShowPerformanceMonitor
-        {
-            get => _showPerformanceMonitor;
-            set => SetProperty(ref _showPerformanceMonitor, value);
-        }
-
-        private string _transferSpeedDisplay = "—";
-        public string TransferSpeedDisplay
-        {
-            get => _transferSpeedDisplay;
-            set => SetProperty(ref _transferSpeedDisplay, value);
-        }
-
-        private string _etaDisplay = "—";
-        public string EtaDisplay
-        {
-            get => _etaDisplay;
-            set => SetProperty(ref _etaDisplay, value);
-        }
-
-        private string _filesPerSecondDisplay = "—";
-        public string FilesPerSecondDisplay
-        {
-            get => _filesPerSecondDisplay;
-            set => SetProperty(ref _filesPerSecondDisplay, value);
-        }
-
-        private string _dataProgressDisplay = "—";
-        public string DataProgressDisplay
-        {
-            get => _dataProgressDisplay;
-            set => SetProperty(ref _dataProgressDisplay, value);
-        }
-
-        private string _currentFileDisplay = "";
-        public string CurrentFileDisplay
-        {
-            get => _currentFileDisplay;
-            set => SetProperty(ref _currentFileDisplay, value);
-        }
-
-        /// <summary>Formats a byte count as B/KB/MB/GB/TB.</summary>
-        private static string FormatBytes(double bytes)
-        {
-            string[] units = { "B", "KB", "MB", "GB", "TB", "PB" };
-            int i = 0;
-            while (bytes >= 1024 && i < units.Length - 1) { bytes /= 1024; i++; }
-            return $"{bytes:0.##} {units[i]}";
-        }
-
-        /// <summary>Formats a TimeSpan compactly (e.g. "3m 12s", "45s").</summary>
-        private static string FormatEta(TimeSpan? span)
-        {
-            if (span == null) return "—";
-            var t = span.Value;
-            if (t.TotalHours >= 1) return $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s";
-            if (t.TotalMinutes >= 1) return $"{t.Minutes}m {t.Seconds}s";
-            return $"{t.Seconds}s";
-        }
-
-        /// <summary>
-        /// Updates the live performance-metric display properties from a progress report.
-        /// </summary>
-        private void UpdatePerformanceMetrics(Services.OperationProgress p)
-        {
-            ShowPerformanceMonitor = true;
-            TransferSpeedDisplay = $"{FormatBytes(p.BytesPerSecond)}/s";
-            EtaDisplay = FormatEta(p.EstimatedRemaining);
-            FilesPerSecondDisplay = $"{p.FilesPerSecond:0.0} files/s";
-            DataProgressDisplay = $"{FormatBytes(p.BytesProcessed)} / {FormatBytes(p.TotalBytes)}";
-            CurrentFileDisplay = p.CurrentFile ?? "";
-        }
-
-        public string VersionInfo => "v5.0 build 1.4.7";
-
-
-        private string _lastOperationDuration = "";
-        public string LastOperationDuration
-        {
-            get => _lastOperationDuration;
-            set => SetProperty(ref _lastOperationDuration, value);
-        }
 
 
         // ---- Duplicates tab (extracted to DuplicatesViewModel in Build 1.4.6) ----
@@ -575,7 +480,6 @@ namespace FileOrganizer.ViewModels
         }
 
         // Collections
-        public ObservableCollection<QueueEntry> FileQueue { get; } = new ObservableCollection<QueueEntry>();
         // ---- History tab (extracted to HistoryViewModel in Build 1.4.5) ----
         public HistoryViewModel HistoryVM { get; }
         // Operational code adds entries via AddHistoryEntry (below); config/persistence read this.
@@ -621,28 +525,27 @@ namespace FileOrganizer.ViewModels
         // StatisticsViewModel is the IStatsSink; operational code writes via the _stats field.
         public StatisticsViewModel StatisticsVM { get; }
 
+        // ---- Operations tab (extracted to OperationsViewModel in Build 1.4.8) ----
+        public OperationsViewModel OperationsVM { get; }
+
+        // ---- IOperationsSettingsProvider ----
+        // Supplies the Configuration-tab settings the Operations pipeline reads, plus the
+        // exception filter (which stays with the scan pipeline here).
+        ScanMode IOperationsSettingsProvider.SelectedScanMode => SelectedScanMode;
+        DestinationStructureMode IOperationsSettingsProvider.StructureMode => StructureMode;
+        FileConflictResolution IOperationsSettingsProvider.ConflictResolution => ConflictResolution;
+        List<QueueEntry> IOperationsSettingsProvider.ApplyExceptionFilters(List<QueueEntry> entries) => ApplyExceptionFilters(entries);
+
+        /// <summary>
+        /// Startup hook (called from App). Delegates to OperationsViewModel, which owns the
+        /// resume/undo pipeline.
+        /// </summary>
+        public void CheckForIncompleteOperation() => OperationsVM.CheckForIncompleteOperation();
+
         // Queue counters
-        private int _pendingCount = 0;
-        private int _movedCount = 0;
-        private int _failedCount = 0;
 
-        public int PendingCount
-        {
-            get => _pendingCount;
-            set => SetProperty(ref _pendingCount, value);
-        }
 
-        public int MovedCount
-        {
-            get => _movedCount;
-            set => SetProperty(ref _movedCount, value);
-        }
 
-        public int FailedCount
-        {
-            get => _failedCount;
-            set => SetProperty(ref _failedCount, value);
-        }
 
         #endregion
 
@@ -656,13 +559,6 @@ namespace FileOrganizer.ViewModels
         public ICommand AnalyzeSpaceCommand { get; }
         public ICommand SaveConfigCommand { get; }
         public ICommand ClearConfigCommand { get; }
-        public ICommand InitialScanCommand { get; }
-        public ICommand QuickScanCommand { get; }
-        public ICommand UndoCommand { get; }
-        public ICommand DryRunCommand { get; }
-        public ICommand LiveMoveCommand { get; }
-        public ICommand LiveCopyCommand { get; }
-        public ICommand ClearQueueCommand { get; }
         public ICommand TestNotificationsCommand { get; }
         
         #endregion
@@ -698,15 +594,24 @@ namespace FileOrganizer.ViewModels
             HistoryVM = new HistoryViewModel(_notifications, _session, _historyManager);
             StatisticsVM = new StatisticsViewModel(_notifications);
             _stats = StatisticsVM;
+            OperationsVM = new OperationsViewModel(
+                _notifications,
+                _session,
+                HistoryVM,
+                StatisticsVM,
+                _toastService,
+                _fileScanner,
+                _resumeStateManager,
+                this);                       // IOperationsSettingsProvider
             DuplicatesVM = new DuplicatesViewModel(
                 _notifications,
                 HistoryVM,
                 _session,
                 StatisticsVM,                // IStatsSink
                 _toastService,
-                p => ProgressValue = p,     // progress bar (owned by MainViewModel)
-                FormatDuration,
-                d => LastOperationDuration = d,
+                p => OperationsVM.ProgressValue = p,        // shared progress bar (owned by OperationsVM)
+                OperationsViewModel.FormatDuration,
+                d => OperationsVM.LastOperationDuration = d,
                 () => SelectedScanMode);
             
             // Initialize commands
@@ -718,13 +623,6 @@ namespace FileOrganizer.ViewModels
             AnalyzeSpaceCommand = new RelayCommand(_ => AnalyzeSpace());
             SaveConfigCommand = new RelayCommand(_ => SaveConfig());
             ClearConfigCommand = new RelayCommand(_ => ClearConfig());
-            InitialScanCommand = new RelayCommand(_ => InitialScan());
-            QuickScanCommand = new RelayCommand(_ => QuickScan());
-            UndoCommand = new RelayCommand(_ => Undo(), _ => CanUndo());
-            DryRunCommand = new RelayCommand(_ => DryRun());
-            LiveMoveCommand = new RelayCommand(_ => LiveMove());
-            LiveCopyCommand = new RelayCommand(_ => LiveCopy());
-            ClearQueueCommand = new RelayCommand(_ => ClearQueue());
             TestNotificationsCommand = new RelayCommand(_ => TestNotifications());
 
             // Load persisted configuration and history
@@ -989,948 +887,6 @@ namespace FileOrganizer.ViewModels
             }
         }
 
-        private async void InitialScan()
-        {
-            if (string.IsNullOrEmpty(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a source folder first.", 
-                    "No Source Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (!System.IO.Directory.Exists(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Source folder does not exist.", 
-                    "Invalid Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                return;
-            }
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            StatusMessage = "Running initial scan...";
-            FileQueue.Clear();
-            PendingCount = 0;
-            MovedCount = 0;
-            FailedCount = 0;
-
-            // Send start notification
-            _toastService.ShowOperationStarted("Initial Scan", $"Scanning {SourceFolder}");
-
-            try
-            {
-                var progress = new Progress<double>(percent =>
-                {
-                    ProgressValue = percent;
-                    StatusMessage = $"Scanning... {percent:F1}% complete";
-                });
-
-                var results = await _fileScanner.ScanDirectoryAsync(SourceFolder, SelectedScanMode, progress);
-
-                // Apply exception filters
-                results = ApplyExceptionFilters(results);
-
-                foreach (var entry in results)
-                {
-                    FileQueue.Add(entry);
-                }
-
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                PendingCount = results.Count;
-                ProgressValue = 0;
-                StatusMessage = $"Scan complete! Found {results.Count} files in {LastOperationDuration}";
-                
-                // Show completion banner
-                ShowCompletionBanner("Initial Scan", 
-                    $"Found {results.Count} files  |  Duration: {LastOperationDuration}  |  Ready to organize", 
-                    "🔍");
-                
-                // Add to history
-                AddHistoryEntry("Initial Scan", results.Count, results.Count, "Success");
-                
-                // Update statistics
-                _stats.IncrementOperations();
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                ProgressValue = 0;
-                StatusMessage = $"Scan failed: {ex.Message}";
-                
-                // Send failure notification
-                _toastService.ShowOperationFailed("Initial Scan", ex.Message);
-                
-                System.Windows.MessageBox.Show($"Error during scan:\n{ex.Message}", 
-                    "Scan Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                
-                // Add failed history entry
-                AddHistoryEntry("Initial Scan", 0, 0, "Failed");
-            }
-        }
-
-        private void QuickScan()
-        {
-            if (string.IsNullOrEmpty(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a source folder first.", 
-                    "No Source Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (!System.IO.Directory.Exists(SourceFolder))
-            {
-                System.Windows.MessageBox.Show("Source folder does not exist.", 
-                    "Invalid Folder", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                return;
-            }
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            StatusMessage = "Running quick scan (top-level only)...";
-            FileQueue.Clear();
-            PendingCount = 0;
-            MovedCount = 0;
-            FailedCount = 0;
-
-            // Send start notification
-            _toastService.ShowOperationStarted("Quick Scan", $"Scanning {SourceFolder} (top-level only)");
-
-            try
-            {
-                var results = _fileScanner.QuickScan(SourceFolder);
-
-                // Apply exception filters
-                results = ApplyExceptionFilters(results);
-
-                foreach (var entry in results)
-                {
-                    FileQueue.Add(entry);
-                }
-
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                PendingCount = results.Count;
-                StatusMessage = $"Quick scan complete! Found {results.Count} files in {LastOperationDuration}";
-                
-                // Show completion banner
-                ShowCompletionBanner("Quick Scan", 
-                    $"Found {results.Count} files in top-level directory  |  Duration: {LastOperationDuration}", 
-                    "⚡");
-                
-                // Add to history
-                AddHistoryEntry("Quick Scan", results.Count, results.Count, "Success");
-                
-                // Update statistics
-                _stats.IncrementOperations();
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                StatusMessage = $"Quick scan failed: {ex.Message}";
-                
-                // Send failure notification
-                _toastService.ShowOperationFailed("Quick Scan", ex.Message);
-                
-                System.Windows.MessageBox.Show($"Error during quick scan:\n{ex.Message}", 
-                    "Scan Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                
-                // Add failed history entry
-                AddHistoryEntry("Quick Scan", 0, 0, "Failed");
-            }
-        }
-
-        private bool CanUndo()
-        {
-            return _lastMoveOperation != null && _lastMoveOperation.Count > 0;
-        }
-
-        private async void Undo()
-        {
-            if (_lastMoveOperation == null || _lastMoveOperation.Count == 0)
-            {
-                ShowCompletionBanner("Nothing to Undo", 
-                    "No recent move operation found. Move files first to enable undo functionality.", 
-                    "ℹ️");
-                return;
-            }
-
-            var result = System.Windows.MessageBox.Show(
-                $"This will attempt to undo the last move operation ({_lastMoveOperation.Count} files).\n\nContinue?",
-                "Confirm Undo",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
-
-            if (result != System.Windows.MessageBoxResult.Yes)
-                return;
-
-            StatusMessage = "Undoing last operation...";
-            int successCount = 0;
-            int failedCount = 0;
-
-            try
-            {
-                for (int i = 0; i < _lastMoveOperation.Count; i++)
-                {
-                    var entry = _lastMoveOperation[i];
-                    
-                    try
-                    {
-                        // Only undo if it was a move operation
-                        if (entry.Status == "Moved" && !string.IsNullOrEmpty(entry.DestinationPath))
-                        {
-                            if (System.IO.File.Exists(entry.DestinationPath))
-                            {
-                                // Ensure source directory exists
-                                var sourceDir = System.IO.Path.GetDirectoryName(entry.SourcePath);
-                                if (!System.IO.Directory.Exists(sourceDir))
-                                {
-                                    System.IO.Directory.CreateDirectory(sourceDir);
-                                }
-
-                                // Move file back to original location
-                                System.IO.File.Move(entry.DestinationPath, entry.SourcePath, true);
-                                successCount++;
-                            }
-                            else
-                            {
-                                failedCount++; // File doesn't exist at destination
-                            }
-                        }
-
-                        ProgressValue = ((double)(i + 1) / _lastMoveOperation.Count) * 100;
-                        StatusMessage = $"Undoing... {ProgressValue:F1}%";
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Failed to undo file {entry.FileName}: {ex.Message}");
-                        failedCount++;
-                    }
-                }
-
-                ProgressValue = 0;
-                _lastMoveOperation.Clear(); // Clear after undo attempt
-
-                StatusMessage = $"Undo complete! Restored: {successCount}, Failed: {failedCount}";
-
-                // Add to history
-                AddHistoryEntry("Undo Operation", successCount + failedCount, successCount, 
-                    successCount > 0 ? "Success" : "Failed");
-                _stats.IncrementOperations();
-
-                ShowCompletionBanner("Undo Complete", 
-                    $"Restored: {successCount} files  |  Failed: {failedCount} files  |  Files returned to original locations", 
-                    successCount > 0 ? "↩️" : "⚠️");
-            }
-            catch (Exception ex)
-            {
-                ProgressValue = 0;
-                StatusMessage = $"Undo failed: {ex.Message}";
-                ShowCompletionBanner("Undo Error", 
-                    $"Error during undo operation: {ex.Message}", 
-                    "❌");
-            }
-        }
-
-        private void DryRun()
-        {
-            if (FileQueue.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No files in queue. Please run a scan first.", 
-                    "Empty Queue", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(DestinationFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a destination folder first.", 
-                    "No Destination", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-            
-            StatusMessage = "Running dry run (preview)...";
-
-            try
-            {
-                var config = new Config
-                {
-                    OperationMode = OperationMode,
-                    StructureMode = StructureMode,
-                    ConflictResolution = ConflictResolution,
-                    SourceFolder = SourceFolder
-                };
-
-                var engine = new Services.MoveEngine(config);
-
-                // Build destination paths for preview
-                int wouldMove = 0;
-                int wouldSkip = 0;
-                long totalBytes = 0;
-
-                foreach (var entry in FileQueue)
-                {
-                    // Simulate what would happen
-                    var destPath = BuildPreviewDestPath(entry);
-                    
-                    if (System.IO.File.Exists(destPath))
-                    {
-                        if (ConflictResolution == FileConflictResolution.Skip)
-                        {
-                            wouldSkip++;
-                            continue;
-                        }
-                    }
-
-                    wouldMove++;
-                    totalBytes += entry.SizeBytes;
-                }
-
-                // Add to history
-                AddHistoryEntry("Dry Run", FileQueue.Count, wouldMove, "Success");
-                _stats.IncrementOperations();
-                
-                double sizeGB = totalBytes / (1024.0 * 1024.0 * 1024.0);
-                StatusMessage = $"Dry run complete! Would process {wouldMove} files ({sizeGB:F2} GB).";
-                
-                System.Windows.MessageBox.Show(
-                    $"Dry Run Preview:\n\n" +
-                    $"Total files in queue: {FileQueue.Count}\n" +
-                    $"Would {OperationMode.ToString().ToLower()}: {wouldMove}\n" +
-                    $"Would skip: {wouldSkip}\n" +
-                    $"Total size: {sizeGB:F2} GB\n" +
-                    $"Structure: {StructureMode}\n" +
-                    $"Conflict handling: {ConflictResolution}\n\n" +
-                    $"No files were actually moved or copied.",
-                    "Dry Run Complete",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Dry run failed: {ex.Message}";
-                System.Windows.MessageBox.Show($"Error during dry run:\n{ex.Message}",
-                    "Dry Run Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-
-        private string BuildPreviewDestPath(QueueEntry entry)
-        {
-            var fileName = System.IO.Path.GetFileName(entry.SourcePath);
-
-            switch (StructureMode)
-            {
-                case DestinationStructureMode.OrganizeByCategory:
-                    return System.IO.Path.Combine(DestinationFolder, entry.Category, fileName);
-
-                case DestinationStructureMode.PreserveStructure:
-                    var sourceDir = System.IO.Path.GetDirectoryName(entry.SourcePath);
-                    if (!string.IsNullOrEmpty(sourceDir) && !string.IsNullOrEmpty(SourceFolder))
-                    {
-                        var relativePath = System.IO.Path.GetRelativePath(SourceFolder, sourceDir);
-                        if (relativePath != ".")
-                        {
-                            return System.IO.Path.Combine(DestinationFolder, relativePath, fileName);
-                        }
-                    }
-                    return System.IO.Path.Combine(DestinationFolder, fileName);
-
-                case DestinationStructureMode.Hybrid:
-                    var srcDir = System.IO.Path.GetDirectoryName(entry.SourcePath);
-                    if (!string.IsNullOrEmpty(srcDir) && !string.IsNullOrEmpty(SourceFolder))
-                    {
-                        var relPath = System.IO.Path.GetRelativePath(SourceFolder, srcDir);
-                        if (relPath != ".")
-                        {
-                            return System.IO.Path.Combine(DestinationFolder, entry.Category, relPath, fileName);
-                        }
-                    }
-                    return System.IO.Path.Combine(DestinationFolder, entry.Category, fileName);
-
-                default:
-                    return System.IO.Path.Combine(DestinationFolder, fileName);
-            }
-        }
-
-        private async void LiveMove()
-        {
-            if (FileQueue.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No files in queue. Please run a scan first.", 
-                    "Empty Queue", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(DestinationFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a destination folder first.", 
-                    "No Destination", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            var result = System.Windows.MessageBox.Show(
-                $"This will MOVE {FileQueue.Count} files from:\n{SourceFolder}\n\nto:\n{DestinationFolder}\n\nFiles will be REMOVED from source. Continue?",
-                "Confirm Move Operation",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning);
-
-            if (result != System.Windows.MessageBoxResult.Yes)
-                return;
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            StatusMessage = "Executing live move operation...";
-
-            // Send start notification
-            _toastService.ShowOperationStarted("Live Move", $"Moving {FileQueue.Count} files to {DestinationFolder}");
-
-            try
-            {
-                var config = new Config
-                {
-                    OperationMode = FileOperationMode.Move,
-                    StructureMode = StructureMode,
-                    ConflictResolution = ConflictResolution,
-                    SourceFolder = SourceFolder
-                };
-
-                var queueList = FileQueue.ToList();
-
-                // Create and save initial resume state
-                _currentResumeState = _resumeStateManager.CreateState(
-                    FileOperationMode.Move,
-                    SourceFolder,
-                    DestinationFolder,
-                    queueList);
-                _resumeStateManager.SaveState(_currentResumeState);
-                _filesProcessedSinceLastSave = 0;
-
-                var engine = new Services.MoveEngine(config);
-                var progress = new Progress<Services.OperationProgress>(p =>
-                {
-                    ProgressValue = p.PercentComplete;
-                    StatusMessage = $"Moving... {p.PercentComplete:F1}% ({p.ProcessedFiles}/{p.TotalFiles}) - {p.CurrentFile}";
-                    MovedCount = p.ProcessedFiles;
-                    PendingCount = p.TotalFiles - p.ProcessedFiles;
-                    UpdatePerformanceMetrics(p);
-
-                    // Update resume state periodically
-                    _filesProcessedSinceLastSave++;
-                    if (_filesProcessedSinceLastSave >= FilesPerStateSave)
-                    {
-                        UpdateResumeState(queueList.Take(p.ProcessedFiles).ToList());
-                        _filesProcessedSinceLastSave = 0;
-                    }
-                });
-
-                // Status callback for real-time verification feedback
-                Action<string> statusCallback = (message) =>
-                {
-                    StatusMessage = message;
-                };
-
-                var opResult = await engine.ProcessQueueAsync(queueList, DestinationFolder, statusCallback, progress);
-
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                ProgressValue = 0;
-                ShowPerformanceMonitor = false;
-                MovedCount = opResult.SuccessCount;
-                FailedCount = opResult.FailedCount;
-                PendingCount = 0;
-                // Statistics are owned by StatisticsViewModel; record this batch through the sink.
-                _stats.RecordOperation(
-                    opResult.SuccessCount,
-                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
-                    opResult.FilesVerified,
-                    opResult.VerificationPassed,
-                    opResult.VerificationFailed,
-                    opResult.VerificationRetried);
-
-                // Save for undo - only save successfully moved files
-                _lastMoveOperation.Clear();
-                _lastMoveOperation.AddRange(queueList.Where(e => e.Status == "Moved").ToList());
-
-                // Clear resume state on successful completion
-                _resumeStateManager.ClearState();
-                _currentResumeState = null;
-
-                // Add to history
-                string status = opResult.SuccessCount == opResult.TotalFiles ? "Success" : 
-                               opResult.SuccessCount > 0 ? $"Partial ({opResult.SuccessCount}/{opResult.TotalFiles})" : "Failed";
-                AddHistoryEntry("Live Move", opResult.TotalFiles, opResult.SuccessCount, status,
-                    opResult.FilesVerified, opResult.VerificationPassed, opResult.VerificationFailed, opResult.VerificationRetried);
-
-                StatusMessage = $"Move complete! Success: {opResult.SuccessCount}, Failed: {opResult.FailedCount}, Skipped: {opResult.SkippedCount} in {LastOperationDuration}";
-                
-                // Show completion banner
-                ShowCompletionBanner("Move Operation",
-                    $"Moved: {opResult.SuccessCount}/{opResult.TotalFiles} files ({_stats.DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
-                    "📦");
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                StatusMessage = $"Move failed: {ex.Message}";
-                
-                // Send failure notification
-                _toastService.ShowOperationFailed("Live Move", ex.Message);
-                
-                AddHistoryEntry("Live Move", 0, 0, "Failed");
-                
-                // Resume state is left on disk for potential recovery
-                
-                System.Windows.MessageBox.Show($"Error during move operation:\n{ex.Message}",
-                    "Move Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-
-        private async void LiveCopy()
-        {
-            if (FileQueue.Count == 0)
-            {
-                System.Windows.MessageBox.Show("No files in queue. Please run a scan first.", 
-                    "Empty Queue", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            if (string.IsNullOrEmpty(DestinationFolder))
-            {
-                System.Windows.MessageBox.Show("Please select a destination folder first.", 
-                    "No Destination", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
-
-            var result = System.Windows.MessageBox.Show(
-                $"This will COPY {FileQueue.Count} files from:\n{SourceFolder}\n\nto:\n{DestinationFolder}\n\nOriginals will be kept in source. Continue?",
-                "Confirm Copy Operation",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
-
-            if (result != System.Windows.MessageBoxResult.Yes)
-                return;
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            StatusMessage = "Executing live copy operation...";
-
-            // Send start notification
-            _toastService.ShowOperationStarted("Live Copy", $"Copying {FileQueue.Count} files to {DestinationFolder}");
-
-            try
-            {
-                var config = new Config
-                {
-                    OperationMode = FileOperationMode.Copy,
-                    StructureMode = StructureMode,
-                    ConflictResolution = ConflictResolution,
-                    SourceFolder = SourceFolder
-                };
-
-                var queueList = FileQueue.ToList();
-
-                // Create and save initial resume state
-                _currentResumeState = _resumeStateManager.CreateState(
-                    FileOperationMode.Copy,
-                    SourceFolder,
-                    DestinationFolder,
-                    queueList);
-                _resumeStateManager.SaveState(_currentResumeState);
-                _filesProcessedSinceLastSave = 0;
-
-                var engine = new Services.MoveEngine(config);
-                var progress = new Progress<Services.OperationProgress>(p =>
-                {
-                    ProgressValue = p.PercentComplete;
-                    StatusMessage = $"Copying... {p.PercentComplete:F1}% ({p.ProcessedFiles}/{p.TotalFiles}) - {p.CurrentFile}";
-                    MovedCount = p.ProcessedFiles; // Reusing MovedCount for copied files
-                    PendingCount = p.TotalFiles - p.ProcessedFiles;
-                    UpdatePerformanceMetrics(p);
-
-                    // Update resume state periodically
-                    _filesProcessedSinceLastSave++;
-                    if (_filesProcessedSinceLastSave >= FilesPerStateSave)
-                    {
-                        UpdateResumeState(queueList.Take(p.ProcessedFiles).ToList());
-                        _filesProcessedSinceLastSave = 0;
-                    }
-                });
-
-                // Status callback for real-time verification feedback
-                Action<string> statusCallback = (message) =>
-                {
-                    StatusMessage = message;
-                };
-
-                var opResult = await engine.ProcessQueueAsync(queueList, DestinationFolder, statusCallback, progress);
-
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                ProgressValue = 0;
-                ShowPerformanceMonitor = false;
-                MovedCount = opResult.SuccessCount;
-                FailedCount = opResult.FailedCount;
-                PendingCount = 0;
-                // Statistics are owned by StatisticsViewModel; record this batch through the sink.
-                _stats.RecordOperation(
-                    opResult.SuccessCount,
-                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
-                    opResult.FilesVerified,
-                    opResult.VerificationPassed,
-                    opResult.VerificationFailed,
-                    opResult.VerificationRetried);
-
-                // Clear resume state on successful completion
-                _resumeStateManager.ClearState();
-                _currentResumeState = null;
-
-                // Add to history
-                string status = opResult.SuccessCount == opResult.TotalFiles ? "Success" : 
-                               opResult.SuccessCount > 0 ? $"Partial ({opResult.SuccessCount}/{opResult.TotalFiles})" : "Failed";
-                AddHistoryEntry("Live Copy", opResult.TotalFiles, opResult.SuccessCount, status,
-                    opResult.FilesVerified, opResult.VerificationPassed, opResult.VerificationFailed, opResult.VerificationRetried);
-
-                StatusMessage = $"Copy complete! Success: {opResult.SuccessCount}, Failed: {opResult.FailedCount}, Skipped: {opResult.SkippedCount} in {LastOperationDuration}";
-                
-                // Show completion banner
-                ShowCompletionBanner("Copy Operation",
-                    $"Copied: {opResult.SuccessCount}/{opResult.TotalFiles} files ({_stats.DataProcessedGB:F2} GB)  |  Failed: {opResult.FailedCount}  |  Skipped: {opResult.SkippedCount}  |  Duration: {LastOperationDuration}",
-                    "📋");
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                var duration = stopwatch.Elapsed;
-                LastOperationDuration = FormatDuration(duration);
-
-                StatusMessage = $"Copy failed: {ex.Message}";
-                
-                // Send failure notification
-                _toastService.ShowOperationFailed("Live Copy", ex.Message);
-                
-                AddHistoryEntry("Live Copy", 0, 0, "Failed");
-                
-                // Resume state is left on disk for potential recovery
-                
-                System.Windows.MessageBox.Show($"Error during copy operation:\n{ex.Message}",
-                    "Copy Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-
-        private void ClearQueue()
-        {
-            FileQueue.Clear();
-            PendingCount = 0;
-            MovedCount = 0;
-            FailedCount = 0;
-            StatusMessage = "Queue cleared";
-        }
-
-        /// <summary>
-        /// Updates queue entry with verification result
-        /// </summary>
-        public void UpdateQueueEntryVerification(QueueEntry entry, CopyResult result)
-        {
-            if (result != null)
-            {
-                entry.Verified = result.Verified;
-                entry.VerificationRetries = result.VerificationRetries;
-                entry.VerificationFailed = result.VerificationFailed;
-                
-                if (result.VerificationMode == VerificationMode.None)
-                    entry.VerificationMethod = "None";
-                else if (!string.IsNullOrEmpty(result.SourceHash))
-                    entry.VerificationMethod = "✅ SHA256";
-                else if (result.Verified)
-                    entry.VerificationMethod = "✅ Size";
-                else
-                    entry.VerificationMethod = "❌ Failed";
-                
-                if (result.VerificationRetries > 0 && result.Verified)
-                    entry.VerificationMethod += $" (Retry {result.VerificationRetries})";
-            }
-        }
-
-        /// <summary>
-        /// Updates the resume state with completed files
-        /// </summary>
-        private void UpdateResumeState(List<QueueEntry> processedEntries)
-        {
-            if (_currentResumeState != null)
-            {
-                _resumeStateManager.UpdateState(_currentResumeState, processedEntries);
-            }
-        }
-
-        /// <summary>
-        /// Resumes an incomplete operation
-        /// </summary>
-        public async void ResumeOperation(ResumeState state)
-        {
-            if (state == null || state.RemainingQueue == null || state.RemainingQueue.Count == 0)
-            {
-                System.Windows.MessageBox.Show("Invalid resume state.", 
-                    "Resume Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                return;
-            }
-
-            StatusMessage = $"Resuming {state.OperationMode} operation...";
-
-            try
-            {
-                var config = new Config
-                {
-                    OperationMode = state.OperationMode,
-                    StructureMode = StructureMode,
-                    ConflictResolution = ConflictResolution,
-                    SourceFolder = state.SourceFolder
-                };
-
-                _currentResumeState = state;
-                _filesProcessedSinceLastSave = 0;
-
-                var engine = new Services.MoveEngine(config);
-                var totalFiles = state.TotalFiles;
-                var alreadyCompleted = state.CompletedCount;
-
-                var progress = new Progress<Services.OperationProgress>(p =>
-                {
-                    var actualProcessed = alreadyCompleted + p.ProcessedFiles;
-                    var actualPercent = (double)actualProcessed / totalFiles * 100;
-                    
-                    ProgressValue = actualPercent;
-                    StatusMessage = $"Resuming {state.OperationMode}... {actualPercent:F1}% ({actualProcessed}/{totalFiles}) - {p.CurrentFile}";
-                    MovedCount = actualProcessed;
-                    PendingCount = totalFiles - actualProcessed;
-
-                    // Update resume state periodically
-                    _filesProcessedSinceLastSave++;
-                    if (_filesProcessedSinceLastSave >= FilesPerStateSave)
-                    {
-                        UpdateResumeState(state.RemainingQueue.Take(p.ProcessedFiles).ToList());
-                        _filesProcessedSinceLastSave = 0;
-                    }
-                });
-
-                // Status callback for real-time verification feedback
-                Action<string> statusCallback = (message) =>
-                {
-                    StatusMessage = message;
-                };
-
-                var opResult = await engine.ProcessQueueAsync(state.RemainingQueue, state.DestinationFolder, statusCallback, progress);
-
-                ProgressValue = 0;
-                var totalSuccess = alreadyCompleted + opResult.SuccessCount;
-                MovedCount = totalSuccess;
-                FailedCount = opResult.FailedCount;
-                PendingCount = 0;
-                _stats.RecordOperation(
-                    opResult.SuccessCount,
-                    opResult.TotalBytesProcessed / (1024.0 * 1024.0 * 1024.0),
-                    0, 0, 0, 0);
-
-                // Clear resume state on successful completion
-                _resumeStateManager.ClearState();
-                _currentResumeState = null;
-
-                // Add to history
-                string status = totalSuccess == totalFiles ? "Success" : 
-                               totalSuccess > 0 ? $"Partial ({totalSuccess}/{totalFiles})" : "Failed";
-                AddHistoryEntry($"Resume {state.OperationMode}", totalFiles, totalSuccess, status);
-
-                StatusMessage = $"Resume complete! Success: {totalSuccess}, Failed: {opResult.FailedCount}, Skipped: {opResult.SkippedCount}";
-                
-                System.Windows.MessageBox.Show(
-                    $"Resume operation completed!\n\nTotal Success: {totalSuccess}/{totalFiles}\nFailed: {opResult.FailedCount}\nSkipped: {opResult.SkippedCount}",
-                    "Resume Complete",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Resume failed: {ex.Message}";
-                AddHistoryEntry("Resume Operation", 0, 0, "Failed");
-                
-                // Resume state is left on disk for another attempt
-                
-                System.Windows.MessageBox.Show($"Error during resume operation:\n{ex.Message}",
-                    "Resume Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-        }
-
-        /// <summary>
-        /// Undoes a partially completed operation from resume state
-        /// </summary>
-        public async void UndoFromResume(ResumeState state)
-        {
-            if (state == null || state.CompletedFiles == null || state.CompletedFiles.Count == 0)
-            {
-                ShowCompletionBanner("Nothing to Undo", 
-                    "No files found to undo from the incomplete operation.", 
-                    "ℹ️");
-                _resumeStateManager.ClearState();
-                return;
-            }
-
-            StatusMessage = "Undoing incomplete operation...";
-            int successCount = 0;
-            int failedCount = 0;
-
-            try
-            {
-                // Only undo move operations (not copy)
-                if (state.OperationMode != FileOperationMode.Move)
-                {
-                    ShowCompletionBanner("Undo Not Available", 
-                        "Undo is only available for Move operations  |  Copy operations cannot be undone automatically", 
-                        "ℹ️");
-                    _resumeStateManager.ClearState();
-                    return;
-                }
-
-                for (int i = 0; i < state.CompletedFiles.Count; i++)
-                {
-                    var sourcePath = state.CompletedFiles[i];
-                    
-                    try
-                    {
-                        // Find the entry in the original queue to get destination path
-                        var entry = state.RemainingQueue.FirstOrDefault(e => e.SourcePath == sourcePath);
-                        
-                        if (entry != null && !string.IsNullOrEmpty(entry.DestinationPath))
-                        {
-                            if (System.IO.File.Exists(entry.DestinationPath))
-                            {
-                                // Ensure source directory exists
-                                var sourceDir = System.IO.Path.GetDirectoryName(sourcePath);
-                                if (!System.IO.Directory.Exists(sourceDir))
-                                {
-                                    System.IO.Directory.CreateDirectory(sourceDir);
-                                }
-
-                                // Move file back to original location
-                                System.IO.File.Move(entry.DestinationPath, sourcePath, true);
-                                successCount++;
-                            }
-                        }
-
-                        ProgressValue = ((double)(i + 1) / state.CompletedFiles.Count) * 100;
-                        StatusMessage = $"Undoing... {ProgressValue:F1}%";
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Failed to undo file {sourcePath}: {ex.Message}");
-                        failedCount++;
-                    }
-                }
-
-                ProgressValue = 0;
-                
-                // Clear resume state after undo attempt
-                _resumeStateManager.ClearState();
-                _currentResumeState = null;
-
-                StatusMessage = $"Undo from resume complete! Restored: {successCount}, Failed: {failedCount}";
-
-                // Add to history
-                AddHistoryEntry("Undo from Resume", state.CompletedFiles.Count, successCount, 
-                    successCount > 0 ? "Success" : "Failed");
-                _stats.IncrementOperations();
-
-                ShowCompletionBanner("Undo Complete", 
-                    $"Restored: {successCount} files  |  Failed: {failedCount} files  |  Incomplete operation reversed", 
-                    successCount > 0 ? "↩️" : "⚠️");
-            }
-            catch (Exception ex)
-            {
-                ProgressValue = 0;
-                StatusMessage = $"Undo from resume failed: {ex.Message}";
-                ShowCompletionBanner("Undo Error", 
-                    $"Error during undo operation: {ex.Message}", 
-                    "❌");
-            }
-        }
-
-        /// <summary>
-        /// Checks for incomplete operations on startup (called by App.xaml.cs)
-        /// </summary>
-        public void CheckForIncompleteOperation()
-        {
-            try
-            {
-                if (_resumeStateManager.HasIncompleteOperation())
-                {
-                    var state = _resumeStateManager.LoadState();
-                    
-                    if (state != null && _resumeStateManager.ValidateState(state))
-                    {
-                        var summary = _resumeStateManager.GetStateSummary(state);
-                        var dialog = new ResumeDialog(summary);
-                        
-                        var result = dialog.ShowDialog();
-                        
-                        if (result == true)
-                        {
-                            switch (dialog.SelectedAction)
-                            {
-                                case ResumeDialog.ResumeAction.Resume:
-                                    // Restore UI state
-                                    SourceFolder = state.SourceFolder;
-                                    DestinationFolder = state.DestinationFolder;
-                                    ResumeOperation(state);
-                                    break;
-                                    
-                                case ResumeDialog.ResumeAction.Undo:
-                                    UndoFromResume(state);
-                                    break;
-                                    
-                                case ResumeDialog.ResumeAction.Cancel:
-                                    _resumeStateManager.ClearState();
-                                    StatusMessage = "Incomplete operation discarded";
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            // User closed dialog or clicked cancel
-                            _resumeStateManager.ClearState();
-                            StatusMessage = "Incomplete operation discarded";
-                        }
-                    }
-                    else
-                    {
-                        // Invalid state, clean it up
-                        _resumeStateManager.ClearState();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error checking for incomplete operation: {ex.Message}");
-                // Clean up any corrupted state
-                try
-                {
-                    _resumeStateManager.ClearState();
-                }
-                catch { }
-            }
-        }
-
-        /// <summary>
-        /// Applies exception filters to the scan results
-        /// </summary>
         private List<QueueEntry> ApplyExceptionFilters(List<QueueEntry> entries)
         {
             if (Exceptions.Count == 0 || !Exceptions.Any(e => e.IsEnabled))
@@ -2140,28 +1096,6 @@ namespace FileOrganizer.ViewModels
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        /// <summary>
-        /// Format duration into readable string
-        /// </summary>
-        private string FormatDuration(System.TimeSpan duration)
-        {
-            if (duration.TotalSeconds < 1)
-            {
-                return $"{duration.TotalMilliseconds:F0}ms";
-            }
-            else if (duration.TotalMinutes < 1)
-            {
-                return $"{duration.TotalSeconds:F1}s";
-            }
-            else if (duration.TotalHours < 1)
-            {
-                return $"{duration.Minutes}m {duration.Seconds}s";
-            }
-            else
-            {
-                return $"{duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
-            }
-        }
 
         #endregion
     }

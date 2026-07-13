@@ -7,12 +7,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PortableFileOrganizer</AssemblyName>
     <RootNamespace>FileOrganizer</RootNamespace>
-    <AssemblyVersion>5.0.4.7</AssemblyVersion>
-    <FileVersion>5.0.4.7</FileVersion>
+    <AssemblyVersion>5.0.4.8</AssemblyVersion>
+    <FileVersion>5.0.4.8</FileVersion>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <Nullable>disable</Nullable>
-    <Version>5.0.4.7</Version>
-    <InformationalVersion>5.0 - Build 1.4.7</InformationalVersion>
+    <Version>5.0.4.8</Version>
+    <InformationalVersion>5.0 - Build 1.4.8</InformationalVersion>
     <Authors>Professional File Management Solution</Authors>
     <Product>Portable File Organizer</Product>
     <Copyright>© 2026 - Professional File Management Solution</Copyright>

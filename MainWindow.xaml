@@ -7,7 +7,7 @@
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
         xmlns:views="clr-namespace:FileOrganizer.Views"
-        Title="Portable File Organizer v5.0 build 1.4.7" 
+        Title="Portable File Organizer v5.0 build 1.4.8" 
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -43,7 +43,7 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.7" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.8" 
                               FontSize="32" 
                               FontWeight="Bold" 
                               Foreground="{DynamicResource HeaderTextBrush}"/>
@@ -126,7 +126,7 @@
                         <TextBlock Text="Operations"/>
                     </StackPanel>
                 </TabItem.Header>
-                <views:OperationsTabView/>
+                <views:OperationsTabView DataContext="{Binding OperationsVM}"/>
             </TabItem>
 
             <!-- STATISTICS TAB -->
@@ -240,7 +240,7 @@
                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                   FontSize="13"
                                   Margin="0,0,5,0"/>
-                        <TextBlock Text="{Binding LastOperationDuration}" 
+                        <TextBlock Text="{Binding OperationsVM.LastOperationDuration}" 
                                   Foreground="{DynamicResource AccentBrush}"
                                   FontSize="13"
                                   FontWeight="SemiBold"/>
@@ -253,7 +253,7 @@
                 </Grid>
                 
                 <!-- Progress Bar -->
-                <ProgressBar Value="{Binding ProgressValue}" 
+                <ProgressBar Value="{Binding OperationsVM.ProgressValue}" 
                             Minimum="0" 
                             Maximum="100"
                             Height="4"
@@ -290,7 +290,7 @@
                             </Setter>
                             <!-- Hide when progress is 0 -->
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding ProgressValue}" Value="0">
+                                <DataTrigger Binding="{Binding OperationsVM.ProgressValue}" Value="0">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>
