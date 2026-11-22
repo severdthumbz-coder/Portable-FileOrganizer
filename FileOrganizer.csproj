@@ -7,12 +7,17 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PortableFileOrganizer</AssemblyName>
     <RootNamespace>FileOrganizer</RootNamespace>
-    <AssemblyVersion>5.0.4.9</AssemblyVersion>
-    <FileVersion>5.0.4.9</FileVersion>
+    <AssemblyVersion>5.0.5.0</AssemblyVersion>
+    <FileVersion>5.0.5.0</FileVersion>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
-    <Nullable>disable</Nullable>
-    <Version>5.0.4.9</Version>
-    <InformationalVersion>5.0 - Build 1.4.9</InformationalVersion>
+    <!--
+      'annotations' lets the OnboardingKit's nullable reference syntax (string?, Action<int>?)
+      compile without CS8632, while keeping null-state warnings off for the rest of the app
+      (equivalent to the previous 'disable' behaviour for warnings). Added in Build 1.5.0.
+    -->
+    <Nullable>annotations</Nullable>
+    <Version>5.0.5.0</Version>
+    <InformationalVersion>5.0 - Build 1.5.0</InformationalVersion>
     <Authors>Professional File Management Solution</Authors>
     <Product>Portable File Organizer</Product>
     <Copyright>© 2026 - Professional File Management Solution</Copyright>

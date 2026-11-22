@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 
@@ -6,6 +7,7 @@ namespace FileOrganizer
     public partial class MainWindow : Window
     {
         private bool _isDarkMode = false;
+        private Tray.TrayIconManager _tray;   // Build 1.5.0
 
         public MainWindow()
         {
@@ -15,6 +17,35 @@ namespace FileOrganizer
             if (DataContext is ViewModels.MainViewModel viewModel)
             {
                 viewModel.SetBannerNotification(CompletionBanner);
+
+                // ---- System tray (Build 1.5.0) ----
+                // The tray manager reads the two tray settings live from config.json so a change
+                // takes effect without restart. It owns the NotifyIcon; the window drives its
+                // StateChanged/Closing hooks below.
+                var configManager = new Services.ConfigManager();
+                _tray = new Tray.TrayIconManager(
+                    this, viewModel,
+                    getMinimizeToTray: () => configManager.LoadTrayFlags().MinimizeToTray,
+                    getCloseToTray: () => configManager.LoadTrayFlags().CloseToTray);
+
+                StateChanged += (_, _) => _tray.OnStateChanged();
+                Closing += MainWindow_Closing;
+                Closed += (_, _) => _tray.Dispose();
+            }
+
+            // ---- Onboarding (Build 1.5.0) ----
+            // Tell the tour how to switch tabs (the TabControl lives here, not in a ViewModel),
+            // and queue the first-run auto-start for once the window has finished drawing.
+            OnboardingKit.OnboardingController.Current.SetTabSelector(i => MainTabs.SelectedIndex = i);
+            Loaded += (_, _) => OnboardingKit.OnboardingController.Current.ScheduleAutoStart(Dispatcher);
+        }
+
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            // Close-to-tray: hide instead of exit (unless "Exit" was chosen from the tray menu).
+            if (_tray != null && _tray.OnClosing())
+            {
+                e.Cancel = true;
             }
         }
 

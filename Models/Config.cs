@@ -41,6 +41,19 @@ namespace FileOrganizer.Models
         
         // Storage type override (manual selection)
         public string StorageOverride { get; set; } = "Auto"; // "Auto", "NVMe", "SSD", "HDD"
+
+        // ---- Onboarding (Build 1.5.0): guided tour / hints / legend ----
+        // Master switch for the ⓘ hints, ❔ legend button and first-run tour (default ON).
+        public bool ShowOnboardingHelpers { get; set; } = true;
+        // Set once the first-run tour has been finished or skipped, so it never auto-starts again.
+        public bool HasSeenTour { get; set; } = false;
+
+        // ---- System tray (Build 1.5.0) ----
+        // Minimizing the window hides it to the tray instead of the taskbar (default OFF).
+        public bool MinimizeToTray { get; set; } = false;
+        // Closing the window hides it to the tray and keeps automation running, instead of
+        // exiting. "Exit" on the tray menu always truly quits (default OFF).
+        public bool CloseToTray { get; set; } = false;
         
         // Exception filters
         public List<ExceptionFilter> Exceptions { get; set; } = new List<ExceptionFilter>();

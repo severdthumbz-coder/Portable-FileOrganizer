@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:FileOrganizer"
              xmlns:models="clr-namespace:FileOrganizer.Models"
-             xmlns:converters="clr-namespace:FileOrganizer.Converters">
+             xmlns:converters="clr-namespace:FileOrganizer.Converters"
+             xmlns:ob="clr-namespace:OnboardingKit">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="30,20">
@@ -25,7 +26,7 @@
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource TextBrush}"
                               Margin="0,10,0,5"/>
-                    <TextBlock Text="v5.0 build 1.4.9" 
+                    <TextBlock Text="v5.0 build 1.5.0" 
                               FontSize="14" 
                               Foreground="{DynamicResource TextSecondaryBrush}"
                               Margin="0,0,0,5"/>
@@ -45,6 +46,85 @@
                            Cursor="Hand"
                            HorizontalAlignment="Left"
                            ToolTip="Send a test notification to verify Windows toast notifications are working"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Guided Tour & Legend (Build 1.5.0) -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}"
+                   BorderBrush="{DynamicResource BorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="5"
+                   Padding="25"
+                   Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <TextBlock Text="🧭" FontSize="20" Margin="0,0,10,0"/>
+                        <TextBlock Text="Guided Tour &amp; Legend" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="A one-minute walkthrough of every tab. It opens automatically the first time you run the app; replay it any time."
+                              Foreground="{DynamicResource TextSecondaryBrush}"
+                              FontSize="13"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,10"/>
+
+                    <Button Content="▶ Replay guided tour"
+                           Command="{Binding StartTourCommand, Source={x:Static ob:OnboardingController.Current}}"
+                           Padding="15,10"
+                           Background="{DynamicResource AccentBrush}"
+                           Foreground="White"
+                           FontSize="14"
+                           BorderThickness="0"
+                           Cursor="Hand"
+                           HorizontalAlignment="Left"
+                           Margin="0,0,0,16"/>
+
+                    <CheckBox Content="Show onboarding helpers (legend, hints, first-run tour)"
+                              IsChecked="{Binding ShowHelpers, Source={x:Static ob:OnboardingController.Current}}"
+                              Foreground="{DynamicResource TextBrush}"
+                              FontSize="13"
+                              Margin="0,0,0,6"/>
+                    <TextBlock Text="When off, the ⓘ hints and the ❔ legend button are hidden and the tour won't open on its own. You can still replay the tour from the button above."
+                              Foreground="{DynamicResource TextSecondaryBrush}"
+                              FontSize="12"
+                              TextWrapping="Wrap"
+                              Margin="24,0,0,16"/>
+
+                    <TextBlock Text="Legend" FontSize="16" FontWeight="SemiBold"
+                              Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                    <ob:LegendList/>
+                </StackPanel>
+            </Border>
+
+            <!-- Window & Tray (Build 1.5.0) -->
+            <Border Background="{DynamicResource PanelBackgroundBrush}"
+                   BorderBrush="{DynamicResource BorderBrush}"
+                   BorderThickness="1"
+                   CornerRadius="5"
+                   Padding="25"
+                   Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                        <TextBlock Text="🗔" FontSize="20" Margin="0,0,10,0"/>
+                        <TextBlock Text="Window &amp; Tray" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Keep File Organizer running in the notification tray so folder watching and scheduled sweeps continue while the window is hidden. Right-click the tray icon for quick actions, or use Exit there to quit fully."
+                              Foreground="{DynamicResource TextSecondaryBrush}"
+                              FontSize="13"
+                              TextWrapping="Wrap"
+                              Margin="0,0,0,12"/>
+
+                    <CheckBox Content="Minimize to tray (hide the window when minimized)"
+                              IsChecked="{Binding MinimizeToTray}"
+                              Foreground="{DynamicResource TextBrush}"
+                              FontSize="13"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Close to tray (keep running in the background when the window is closed)"
+                              IsChecked="{Binding CloseToTray}"
+                              Foreground="{DynamicResource TextBrush}"
+                              FontSize="13"
+                              Margin="0,0,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -377,8 +457,43 @@
                         <TextBlock Text="Changelog" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     </StackPanel>
 
+                    <!-- Build 1.5.0 -->
+                    <TextBlock Text="Build 1.5.0 - Guided Onboarding &amp; System Tray"
+                              FontWeight="SemiBold"
+                              Foreground="{DynamicResource AccentBrush}"
+                              FontSize="16"
+                              Margin="0,10,0,10"/>
+
+                    <StackPanel Margin="15,0,0,20">
+                        <TextBlock Text="• Guided tour - A first-run walkthrough of every tab (replay any time from the Help tab). Use → / ← / Enter / Esc to navigate."
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• ⓘ hints &amp; ❔ legend - Hover the ⓘ beside any tab for a quick explanation; the ❔ button (top-right) opens a legend of icons and colours. Both can be turned off in Help."
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• System tray - Minimize-to-tray and close-to-tray (each an opt-in setting) keep folder watching and scheduled sweeps running in the background. Right-click the tray icon to open, run a sweep, start/stop watching, pause the scheduler, or exit."
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Single instance - Launching the app again re-shows the existing window instead of opening a second copy (named Mutex)."
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                        <TextBlock Text="• Onboarding kit - The tour/hints/legend come from a reusable OnboardingKit (shared with Video Metadata Editor); its Onb* colours alias the app theme, so they follow light/dark switching."
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  FontSize="13"
+                                  Margin="0,3"
+                                  TextWrapping="Wrap"/>
+                    </StackPanel>
+
                     <!-- Build 1.4.9 -->
-                    <TextBlock Text="Build 1.4.9 - ConfigurationViewModel Extracted — God Object Fully Dismantled" 
+                    <TextBlock Text="Build 1.4.9 - ConfigurationViewModel Extracted — God Object Fully Dismantled"
                               FontWeight="SemiBold"
                               Foreground="{DynamicResource AccentBrush}"
                               FontSize="16"

@@ -49,7 +49,33 @@ namespace FileOrganizer.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public string VersionInfo => "v5.0 build 1.4.9";
+        public string VersionInfo => "v5.0 build 1.5.0";
+
+        // ---- System tray settings (Build 1.5.0) ----
+        // Bound by the Help tab's "Window & Tray" checkboxes. Each persists immediately via the
+        // ConfigManager's isolated tray-flag write, so toggling them can't clobber unsaved
+        // Configuration-tab edits. The TrayIconManager reads the same flags live from config.json.
+        private bool _minimizeToTray;
+        public bool MinimizeToTray
+        {
+            get => _minimizeToTray;
+            set
+            {
+                if (SetProperty(ref _minimizeToTray, value))
+                    _configManager.SaveTrayFlags(_minimizeToTray, _closeToTray);
+            }
+        }
+
+        private bool _closeToTray;
+        public bool CloseToTray
+        {
+            get => _closeToTray;
+            set
+            {
+                if (SetProperty(ref _closeToTray, value))
+                    _configManager.SaveTrayFlags(_minimizeToTray, _closeToTray);
+            }
+        }
 
 
 
@@ -451,6 +477,13 @@ namespace FileOrganizer.ViewModels
                     Automation.ScheduleEnabled = config.ScheduleEnabled;
                     Automation.ScheduleIntervalMinutes = config.ScheduleIntervalMinutes > 0 ? config.ScheduleIntervalMinutes : 60;
                     Automation.ScheduleRunOnStart = config.ScheduleRunOnStart;
+
+                    // Tray settings (Build 1.5.0). Set the backing fields directly so the setters
+                    // don't re-persist what we just loaded.
+                    _minimizeToTray = config.MinimizeToTray;
+                    _closeToTray = config.CloseToTray;
+                    OnPropertyChanged(nameof(MinimizeToTray));
+                    OnPropertyChanged(nameof(CloseToTray));
 
                     StatusMessage = "Configuration loaded";
                 }

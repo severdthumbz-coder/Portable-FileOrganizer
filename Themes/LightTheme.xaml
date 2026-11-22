@@ -19,4 +19,15 @@
     <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
     <SolidColorBrush x:Key="InfoBrush" Color="#2196F3"/>
     <SolidColorBrush x:Key="DisabledBrush" Color="#BDBDBD"/>
+
+    <!-- OnboardingKit brush aliases (Build 1.5.0): map the kit's Onb* keys to this theme's
+         brushes so the tour/legend match the app and follow light/dark switching. -->
+    <StaticResource x:Key="OnbSurfaceBrush"    ResourceKey="PanelBackgroundBrush"/>
+    <StaticResource x:Key="OnbForegroundBrush" ResourceKey="TextBrush"/>
+    <StaticResource x:Key="OnbMutedBrush"      ResourceKey="TextSecondaryBrush"/>
+    <StaticResource x:Key="OnbBorderBrush"     ResourceKey="BorderBrush"/>
+    <StaticResource x:Key="OnbAccentBrush"     ResourceKey="AccentBrush"/>
+    <StaticResource x:Key="OnbOnAccentBrush"   ResourceKey="HeaderTextBrush"/>
+    <!-- Scrim: slightly lighter for the light theme so the dimmed tour isn't jet black. -->
+    <SolidColorBrush x:Key="OnbScrimBrush" Color="#80000000"/>
 </ResourceDictionary>

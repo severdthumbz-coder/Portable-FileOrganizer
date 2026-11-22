@@ -7,6 +7,14 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <!--
+                    OnboardingKit resources (Build 1.5.0) — MUST be merged BEFORE the theme so the
+                    theme's Onb* brush aliases (defined inside each theme dictionary) win over the
+                    kit's dark defaults. App.ApplyTheme() preserves this dictionary when switching
+                    themes (it replaces only the theme entry), so the tour/legend never lose their
+                    styles on a theme toggle.
+                -->
+                <ResourceDictionary Source="Onboarding/Onboarding.xaml"/>
                 <!-- Light Theme (Default) -->
                 <ResourceDictionary Source="Themes/LightTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>

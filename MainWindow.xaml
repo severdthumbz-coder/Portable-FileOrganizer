@@ -7,7 +7,8 @@
         xmlns:controls="clr-namespace:FileOrganizer.Controls"
         xmlns:converters="clr-namespace:FileOrganizer.Converters"
         xmlns:views="clr-namespace:FileOrganizer.Views"
-        Title="Portable File Organizer v5.0 build 1.4.9" 
+        xmlns:ob="clr-namespace:OnboardingKit"
+        Title="Portable File Organizer v5.0 build 1.5.0"
         Height="900" 
         Width="1400"
         WindowStartupLocation="CenterScreen"
@@ -43,9 +44,9 @@
                 </Viewbox>
 
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Portable File Organizer v5.0 build 1.4.9" 
-                              FontSize="32" 
-                              FontWeight="Bold" 
+                    <TextBlock Text="Portable File Organizer v5.0 build 1.5.0"
+                              FontSize="32"
+                              FontWeight="Bold"
                               Foreground="{DynamicResource HeaderTextBrush}"/>
                     <TextBlock Text="Organize your files automatically with Smart Categorization" 
                               FontSize="14" 
@@ -56,7 +57,15 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,30,0">
-                <Button x:Name="ThemeToggleButton" 
+                <!-- ❔ Legend button (Build 1.5.0). Hidden automatically when helpers are off.
+                     Glyph supplied as a white TextBlock so it reads on the coloured header
+                     (the inner toggle sets its own Foreground, so plain Foreground wouldn't win). -->
+                <ob:LegendButton VerticalAlignment="Center" Margin="0,0,8,0">
+                    <ob:LegendButton.Glyph>
+                        <TextBlock Text="❔" FontSize="18" Foreground="White"/>
+                    </ob:LegendButton.Glyph>
+                </ob:LegendButton>
+                <Button x:Name="ThemeToggleButton"
                        Width="40" Height="40" 
                        Background="Transparent" 
                        BorderThickness="0"
@@ -74,7 +83,7 @@
         </Grid>
 
         <!-- TABS -->
-        <TabControl Grid.Row="1" 
+        <TabControl x:Name="MainTabs" Grid.Row="1"
                    Background="{DynamicResource WindowBackgroundBrush}"
                    BorderThickness="0">
             <TabControl.Resources>
@@ -113,6 +122,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="⚙" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Configuration"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Set your source and destination folders, scan mode, copy engine and organization rules here. Save once and it's reused every launch."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:ConfigurationTabView DataContext="{Binding ConfigVM}"/>
@@ -124,6 +135,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="⚡" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Operations"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Scan files into a queue, preview with a Dry Run, then run a Live Copy or Move. Nothing is touched until you confirm."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:OperationsTabView DataContext="{Binding OperationsVM}"/>
@@ -135,6 +148,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="📊" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Statistics"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="A running tally of what the app has done: files processed, data moved, duplicates found and space reclaimed."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:StatisticsTabView DataContext="{Binding StatisticsVM}"/>
@@ -145,6 +160,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🚫" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Exceptions"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Files, folders or patterns to leave untouched. Exceptions apply to every scan, so set them once to protect system folders or active work."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:ExceptionsTabView DataContext="{Binding ExceptionsVM}"/>
@@ -157,6 +174,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🤖" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Automation"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Run hands-off: watch folders to sort files as they arrive, or schedule a sweep on a timer. Build these from rules you've already proven."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:AutomationTabView DataContext="{Binding Automation}"/>
@@ -169,6 +188,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔎" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Search"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Find files by name, or tick 'search inside file contents' to match text within documents (PDF, Word, Excel, text)."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:SearchTabView DataContext="{Binding Search}"/>
@@ -180,6 +201,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="📜" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="History"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Every past operation with its results. Re-run a past job to reload its settings, or undo the last move if something went wrong."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:HistoryTabView DataContext="{Binding HistoryVM}"/>
@@ -191,6 +214,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="🔁" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Duplicates"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="Find duplicate files by content, auto-select which copies to remove with a smart strategy, then review before deleting or moving."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:DuplicatesTabView DataContext="{Binding DuplicatesVM}"/>
@@ -202,6 +227,8 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="❓" FontSize="16" Margin="0,0,8,0"/>
                         <TextBlock Text="Help"/>
+                        <ob:HintMarker Margin="8,0,0,0"
+                                       Hint="The full guide, the icon legend, and the replay button for this tour. You can also turn these onboarding helpers off here."/>
                     </StackPanel>
                 </TabItem.Header>
                 <views:HelpTabView/>
@@ -308,5 +335,10 @@
                                      Margin="0,10,0,0"
                                      Visibility="Collapsed"
                                      Panel.ZIndex="1000"/>
+
+        <!-- Guided-tour overlay (Build 1.5.0). LAST child of the root Grid, spanning all rows,
+             so it dims the whole window. ZIndex 500 keeps it above the tabs but below the
+             completion banner (1000). Binds to OnboardingController.Current internally. -->
+        <ob:TourOverlay Grid.RowSpan="3" Panel.ZIndex="500"/>
     </Grid>
 </Window>

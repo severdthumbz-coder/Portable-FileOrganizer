@@ -128,5 +128,104 @@ namespace FileOrganizer.Services
         {
             return _configPath;
         }
+
+        /// <summary>
+        /// Reads only the two onboarding flags (Build 1.5.0). Used by the OnboardingKit store so
+        /// its state lives in the one config.json without routing through the main Save/Load
+        /// orchestration. Missing file or fields fall back to defaults (helpers ON, tour unseen).
+        /// </summary>
+        public (bool ShowOnboardingHelpers, bool HasSeenTour) LoadOnboardingFlags()
+        {
+            try
+            {
+                if (!File.Exists(_configPath))
+                    return (true, false);
+
+                var json = File.ReadAllText(_configPath);
+                var config = JsonConvert.DeserializeObject<Config>(json);
+                return config == null
+                    ? (true, false)
+                    : (config.ShowOnboardingHelpers, config.HasSeenTour);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading onboarding flags: {ex.Message}");
+                return (true, false);
+            }
+        }
+
+        /// <summary>
+        /// Writes only the two onboarding flags (Build 1.5.0) via read-modify-write, so toggling
+        /// the "Show onboarding helpers" checkbox persists immediately without rebuilding — and
+        /// cannot clobber unsaved Configuration-tab edits. Creates the file from defaults if absent.
+        /// </summary>
+        public bool SaveOnboardingFlags(bool showOnboardingHelpers, bool hasSeenTour)
+        {
+            try
+            {
+                var config = LoadOrDefault();
+                config.ShowOnboardingHelpers = showOnboardingHelpers;
+                config.HasSeenTour = hasSeenTour;
+                File.WriteAllText(_configPath, JsonConvert.SerializeObject(config, Formatting.Indented));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving onboarding flags: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reads only the two tray flags (Build 1.5.0). Missing file/fields fall back to OFF/OFF.
+        /// </summary>
+        public (bool MinimizeToTray, bool CloseToTray) LoadTrayFlags()
+        {
+            try
+            {
+                if (!File.Exists(_configPath))
+                    return (false, false);
+
+                var config = JsonConvert.DeserializeObject<Config>(File.ReadAllText(_configPath));
+                return config == null ? (false, false) : (config.MinimizeToTray, config.CloseToTray);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading tray flags: {ex.Message}");
+                return (false, false);
+            }
+        }
+
+        /// <summary>
+        /// Writes only the two tray flags (Build 1.5.0) via read-modify-write, so toggling a tray
+        /// setting persists immediately without clobbering unsaved Configuration-tab edits.
+        /// </summary>
+        public bool SaveTrayFlags(bool minimizeToTray, bool closeToTray)
+        {
+            try
+            {
+                var config = LoadOrDefault();
+                config.MinimizeToTray = minimizeToTray;
+                config.CloseToTray = closeToTray;
+                File.WriteAllText(_configPath, JsonConvert.SerializeObject(config, Formatting.Indented));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error saving tray flags: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>Loads the existing config for a partial-field update, or a default if absent/corrupt.</summary>
+        private Config LoadOrDefault()
+        {
+            if (File.Exists(_configPath))
+            {
+                var json = File.ReadAllText(_configPath);
+                return JsonConvert.DeserializeObject<Config>(json) ?? CreateDefaultConfig();
+            }
+            return CreateDefaultConfig();
+        }
     }
 }
